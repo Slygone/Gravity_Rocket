@@ -50,3 +50,6 @@ crashlytics-build.properties
 # Claude/MCP
 .claude/
 .mcp.json
+
+# Screenshots from testing
+Assets/Screenshots/
