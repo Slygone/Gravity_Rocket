@@ -234,28 +234,29 @@ public static class GameData
                     goalX = GAME_WIDTH / 2f - GoalWidth / 2f;
                 }
 
+                // All Y values are in HTML canvas coords (Y-down), convert to Unity (Y-up): unity_y = 800 - html_y
                 if (type == 0)
                 {
-                    pList.Add(new PlanetData { x = 80, y = 400, radius = 30 + diff * 15, mass = 100 + diff * 100 });
-                    pList.Add(new PlanetData { x = 320, y = 400, radius = 30 + diff * 15, mass = 100 + diff * 100 });
-                    if (diff > 0.5f) pList.Add(new PlanetData { x = 200 + u * 20, y = 200, radius = 20, mass = 80 + u * 20 });
+                    pList.Add(new PlanetData { x = 80, y = GAME_HEIGHT - 400, radius = 30 + diff * 15, mass = 100 + diff * 100 });
+                    pList.Add(new PlanetData { x = 320, y = GAME_HEIGHT - 400, radius = 30 + diff * 15, mass = 100 + diff * 100 });
+                    if (diff > 0.5f) pList.Add(new PlanetData { x = 200 + u * 20, y = GAME_HEIGHT - 200, radius = 20, mass = 80 + u * 20 });
                 }
                 else if (type == 1)
                 {
                     float blockX = GAME_WIDTH / 2f + Mathf.Sin(i) * 50f;
-                    pList.Add(new PlanetData { x = blockX, y = 450, radius = 40 + diff * 20, mass = 150 + diff * 150 });
-                    if (diff > 0.3f) pList.Add(new PlanetData { x = GAME_WIDTH - blockX, y = 250, radius = 25 + u * 5, mass = 100 + u * 50 });
+                    pList.Add(new PlanetData { x = blockX, y = GAME_HEIGHT - 450, radius = 40 + diff * 20, mass = 150 + diff * 150 });
+                    if (diff > 0.3f) pList.Add(new PlanetData { x = GAME_WIDTH - blockX, y = GAME_HEIGHT - 250, radius = 25 + u * 5, mass = 100 + u * 50 });
                 }
                 else if (type == 2)
                 {
-                    pList.Add(new PlanetData { x = 120, y = 550, radius = 30, mass = 120 + diff * 80 });
-                    pList.Add(new PlanetData { x = 280, y = 350, radius = 30, mass = 120 + diff * 80 });
-                    if (diff > 0.4f) pList.Add(new PlanetData { x = 120, y = 150, radius = 30, mass = 100 + u * 40 });
+                    pList.Add(new PlanetData { x = 120, y = GAME_HEIGHT - 550, radius = 30, mass = 120 + diff * 80 });
+                    pList.Add(new PlanetData { x = 280, y = GAME_HEIGHT - 350, radius = 30, mass = 120 + diff * 80 });
+                    if (diff > 0.4f) pList.Add(new PlanetData { x = 120, y = GAME_HEIGHT - 150, radius = 30, mass = 100 + u * 40 });
                 }
                 else if (type == 3)
                 {
                     float px = GAME_WIDTH / 2f + (i % 2 == 0 ? 60f : -60f);
-                    pList.Add(new PlanetData { x = px, y = 400, radius = 50 + diff * 20, mass = 300 + diff * 200 + u * 100 });
+                    pList.Add(new PlanetData { x = px, y = GAME_HEIGHT - 400, radius = 50 + diff * 20, mass = 300 + diff * 200 + u * 100 });
                 }
                 else if (type == 4)
                 {
@@ -265,7 +266,7 @@ public static class GameData
                         pList.Add(new PlanetData
                         {
                             x = 80 + ((i * j * 31) % 240),
-                            y = 150 + ((i * j * 47) % 450),
+                            y = GAME_HEIGHT - (150 + ((i * j * 47) % 450)),
                             radius = 15 + (j % 2) * 5,
                             mass = 50 + diff * 40 + u * 10
                         });
@@ -276,9 +277,9 @@ public static class GameData
                 {
                     planets = pList.ToArray(),
                     startX = startX,
-                    startY = GAME_HEIGHT - 60f,
+                    startY = 60f,
                     goalX = goalX,
-                    goalY = 40f
+                    goalY = GAME_HEIGHT - 40f
                 });
             }
         }

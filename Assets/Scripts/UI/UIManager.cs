@@ -24,17 +24,10 @@ public class UIManager : MonoBehaviour
     private bool hasSectorSelected = false;
 
     // Loadout state
-    private bool loadoutOpen = false;
     private int loadoutU, loadoutS, loadoutL;
     private bool loadoutRequiresAd;
 
-    // Overlay state
-    private bool adOverlayActive = false;
-    private bool purchaseOverlayActive = false;
-    private int purchaseAmount;
-
     // Sector summary state
-    private bool sectorSummaryActive = false;
     private int summaryU, summaryS;
 
     // In-game fleet panel
@@ -214,7 +207,6 @@ public class UIManager : MonoBehaviour
     {
         summaryU = u;
         summaryS = s;
-        sectorSummaryActive = true;
         sectorSummaryPanel.SetActive(true);
         StartCoroutine(SectorSummarySequence(u, s));
     }
@@ -366,7 +358,7 @@ public class UIManager : MonoBehaviour
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
         vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
+        vlg.childControlHeight = true;
 
         ContentSizeFitter csf = content.GetComponent<ContentSizeFitter>();
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -497,6 +489,7 @@ public class UIManager : MonoBehaviour
             tagLe.preferredHeight = 28;
             Text tagTxt = CreateTextElement(tag.transform, "Lbl", mech.name.ToUpper(), 20, isUnlocked ? mech.color : new Color(1, 1, 1, 0.3f), TextAnchor.MiddleCenter);
             tagTxt.fontStyle = FontStyle.Bold;
+            FillRect(tagTxt);
         }
 
         // Spacer
@@ -572,21 +565,30 @@ public class UIManager : MonoBehaviour
             var mech = GameData.SECTOR_MECHANICS[mechId];
             bool isMet = string.IsNullOrEmpty(mech.reqShip) || ps.ActiveShips.Contains(mech.reqShip);
 
-            GameObject hazard = CreateLayoutItem(parent, "Hazard_" + mechId, 100);
+            GameObject hazard = new GameObject("Hazard_" + mechId, typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(VerticalLayoutGroup));
+            hazard.transform.SetParent(parent, false);
+            hazard.GetComponent<Image>().color = Color.black;
+            hazard.GetComponent<LayoutElement>().preferredHeight = isMet ? 80 : 100;
             AddOutline(hazard, isMet ? mech.color : Color.red);
+            VerticalLayoutGroup hzVlg = hazard.GetComponent<VerticalLayoutGroup>();
+            hzVlg.padding = new RectOffset(20, 20, 10, 10);
+            hzVlg.spacing = 4;
+            hzVlg.childForceExpandWidth = true;
+            hzVlg.childForceExpandHeight = false;
 
-            Text hazardTitle = CreateTextElement(hazard.transform, "HTitle", "\u26A0 HAZARD: " + mech.name.ToUpper(), 30, isMet ? mech.color : Color.red, TextAnchor.UpperLeft);
+            Text hazardTitle = CreateTextElement(hazard.transform, "HTitle", "\u26A0 HAZARD: " + mech.name.ToUpper(), 28, isMet ? mech.color : Color.red, TextAnchor.MiddleLeft);
             hazardTitle.fontStyle = FontStyle.Bold;
-            PositionText(hazardTitle, new Vector2(20, -10), new Vector2(-40, -40));
+            SetHeight(hazardTitle.gameObject, 32);
 
-            Text hazardDesc = CreateTextElement(hazard.transform, "HDesc", mech.warning, 26, isMet ? mech.color : Color.red, TextAnchor.MiddleLeft);
-            PositionText(hazardDesc, new Vector2(20, -50), new Vector2(-40, -30));
+            Text hazardDesc = CreateTextElement(hazard.transform, "HDesc", mech.warning, 24, isMet ? mech.color : Color.red, TextAnchor.MiddleLeft);
+            hazardDesc.horizontalOverflow = HorizontalWrapMode.Wrap;
+            SetHeight(hazardDesc.gameObject, 28);
 
             if (!isMet)
             {
-                Text warnTxt = CreateTextElement(hazard.transform, "Warn", "WARNING: Correct ship not equipped in Fleet!", 20, new Color(1, 0.2f, 0.2f), TextAnchor.LowerLeft);
+                Text warnTxt = CreateTextElement(hazard.transform, "Warn", "WARNING: Correct ship not equipped in Fleet!", 20, new Color(1, 0.2f, 0.2f), TextAnchor.MiddleLeft);
                 warnTxt.fontStyle = FontStyle.Bold;
-                PositionText(warnTxt, new Vector2(20, -85), new Vector2(-40, -20));
+                SetHeight(warnTxt.gameObject, 24);
             }
         }
 
@@ -693,14 +695,11 @@ public class UIManager : MonoBehaviour
     {
         var ps = PlayerState.Instance;
 
-        // Title
         Text title = CreateTextElement(parent, "Title", "HANGAR TERMINAL", 64, Color.white, TextAnchor.MiddleLeft);
         title.fontStyle = FontStyle.Bold;
         SetHeight(title.gameObject, 80);
-
         AddSeparator(parent);
 
-        // Ships section
         Text shipHeader = CreateTextElement(parent, "ShipHeader", "FLEET / SHIPS (MULTI-SELECT)", 42, new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
         shipHeader.fontStyle = FontStyle.Bold;
         SetHeight(shipHeader.gameObject, 50);
@@ -710,81 +709,67 @@ public class UIManager : MonoBehaviour
             var ship = kvp.Value;
             bool isUnlocked = ps.UnlockedShips.Contains(ship.id);
             bool isEquipped = ps.ActiveShips.Contains(ship.id);
-
-            GameObject card = CreateLayoutItem(parent, "Ship_" + ship.id, 220);
-            Image cardImg = card.GetComponent<Image>();
-            cardImg.color = isEquipped ? Color.white : Color.black;
-            AddOutline(card, isEquipped ? Color.white : (isUnlocked ? new Color(1, 1, 1, 0.5f) : new Color(1, 1, 1, 0.2f)));
-
-            if (!isUnlocked)
-            {
-                CanvasGroup cg = card.AddComponent<CanvasGroup>();
-                cg.alpha = 0.4f;
-            }
-
             Color textColor = isEquipped ? Color.black : Color.white;
 
-            Text nameText = CreateTextElement(card.transform, "Name", ship.name.ToUpper(), 38, textColor, TextAnchor.UpperLeft);
+            GameObject card = new GameObject("Ship_" + ship.id, typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(VerticalLayoutGroup));
+            card.transform.SetParent(parent, false);
+            card.GetComponent<Image>().color = isEquipped ? Color.white : Color.black;
+            card.GetComponent<LayoutElement>().preferredHeight = 220;
+            AddOutline(card, isEquipped ? Color.white : (isUnlocked ? new Color(1, 1, 1, 0.5f) : new Color(1, 1, 1, 0.2f)));
+            VerticalLayoutGroup vlg = card.GetComponent<VerticalLayoutGroup>();
+            vlg.padding = new RectOffset(24, 24, 16, 16);
+            vlg.spacing = 4;
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+            if (!isUnlocked) card.AddComponent<CanvasGroup>().alpha = 0.4f;
+
+            Text nameText = CreateTextElement(card.transform, "Name", ship.name.ToUpper(), 38, textColor, TextAnchor.MiddleLeft);
             nameText.fontStyle = FontStyle.Bold;
-            PositionText(nameText, new Vector2(24, -16), new Vector2(-24, -42));
+            SetHeight(nameText.gameObject, 44);
 
-            Text perkText = CreateTextElement(card.transform, "Perk", ship.perk, 26, isEquipped ? new Color(0, 0, 0, 0.7f) : new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
-            PositionText(perkText, new Vector2(24, -60), new Vector2(-24, -35));
+            Text perkText = CreateTextElement(card.transform, "Perk", ship.perk, 26,
+                isEquipped ? new Color(0, 0, 0, 0.7f) : new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
+            perkText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            SetHeight(perkText.gameObject, 50);
 
-            if (isEquipped)
-            {
-                GameObject badge = new GameObject("ActiveBadge", typeof(RectTransform), typeof(Image));
-                badge.transform.SetParent(card.transform, false);
-                badge.GetComponent<Image>().color = Color.black;
-                AddOutline(badge);
-                RectTransform atRt = badge.GetComponent<RectTransform>();
-                atRt.anchorMin = new Vector2(1, 1);
-                atRt.anchorMax = new Vector2(1, 1);
-                atRt.pivot = new Vector2(1, 1);
-                atRt.sizeDelta = new Vector2(120, 36);
-                atRt.anchoredPosition = new Vector2(-15, -15);
-                Text activeTxt = CreateTextElement(badge.transform, "Lbl", "ACTIVE", 20, Color.white, TextAnchor.MiddleCenter);
-                activeTxt.fontStyle = FontStyle.Bold;
-                activeTxt.raycastTarget = false;
-                FillRect(activeTxt);
-            }
+            AddFlexSpacer(card.transform);
 
-            // Action button
             string btnLabel = isUnlocked ? (isEquipped ? "DETACH" : "ASSIGN TO FLEET") : "LOCKED";
-            GameObject actionBtn = new GameObject("Action", typeof(RectTransform), typeof(Image), typeof(Button));
+            GameObject actionBtn = new GameObject("Action", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             actionBtn.transform.SetParent(card.transform, false);
-            Image abImg = actionBtn.GetComponent<Image>();
-            abImg.color = isEquipped ? Color.black : Color.black;
-            Outline abOl = actionBtn.AddComponent<Outline>();
-            abOl.effectColor = isEquipped ? (isEquipped ? Color.black : Color.white) : new Color(1, 1, 1, 0.2f);
-            abOl.effectDistance = new Vector2(1, -1);
-            RectTransform abRt = actionBtn.GetComponent<RectTransform>();
-            abRt.anchorMin = new Vector2(0, 0);
-            abRt.anchorMax = new Vector2(1, 0);
-            abRt.pivot = new Vector2(0.5f, 0);
-            abRt.sizeDelta = new Vector2(-30, 60);
-            abRt.anchoredPosition = new Vector2(0, 15);
-
+            actionBtn.GetComponent<Image>().color = isEquipped ? Color.black : Color.black;
+            actionBtn.GetComponent<LayoutElement>().preferredHeight = 55;
+            AddOutline(actionBtn, isEquipped ? Color.black : (isUnlocked ? Color.white : new Color(1, 1, 1, 0.2f)));
             Text abTxt = CreateTextElement(actionBtn.transform, "Lbl", btnLabel, 22,
                 isEquipped ? Color.white : (isUnlocked ? Color.white : new Color(1, 1, 1, 0.3f)), TextAnchor.MiddleCenter);
             abTxt.fontStyle = FontStyle.Bold;
             abTxt.raycastTarget = false;
             FillRect(abTxt);
-
             if (isUnlocked)
             {
                 string capturedId = ship.id;
-                actionBtn.GetComponent<Button>().onClick.AddListener(() =>
-                {
-                    ps.ToggleShipEquip(capturedId);
-                    RefreshContent();
-                });
+                actionBtn.GetComponent<Button>().onClick.AddListener(() => { ps.ToggleShipEquip(capturedId); RefreshContent(); });
+            }
+
+            if (isEquipped)
+            {
+                GameObject badge = new GameObject("ActiveBadge", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+                badge.transform.SetParent(card.transform, false);
+                badge.GetComponent<Image>().color = Color.black;
+                badge.GetComponent<LayoutElement>().ignoreLayout = true;
+                AddOutline(badge);
+                RectTransform atRt = badge.GetComponent<RectTransform>();
+                atRt.anchorMin = new Vector2(1, 1); atRt.anchorMax = new Vector2(1, 1);
+                atRt.pivot = new Vector2(1, 1);
+                atRt.sizeDelta = new Vector2(120, 32);
+                atRt.anchoredPosition = new Vector2(-24, -16);
+                Text activeTxt = CreateTextElement(badge.transform, "Lbl", "ACTIVE", 20, Color.white, TextAnchor.MiddleCenter);
+                activeTxt.fontStyle = FontStyle.Bold; activeTxt.raycastTarget = false; FillRect(activeTxt);
             }
         }
 
         AddSpacer(parent, 40);
 
-        // Trails section
         Text trailHeader = CreateTextElement(parent, "TrailHeader", "EXHAUST / TRAILS", 42, new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
         trailHeader.fontStyle = FontStyle.Bold;
         SetHeight(trailHeader.gameObject, 50);
@@ -794,72 +779,60 @@ public class UIManager : MonoBehaviour
             var trail = kvp.Value;
             bool isUnlocked = ps.UnlockedTrails.Contains(trail.id);
             bool isEquipped = ps.ActiveTrail == trail.id;
-
-            GameObject card = CreateLayoutItem(parent, "Trail_" + trail.id, 220);
-            card.GetComponent<Image>().color = isEquipped ? Color.white : Color.black;
-            AddOutline(card, isEquipped ? Color.white : (isUnlocked ? new Color(1, 1, 1, 0.5f) : new Color(1, 1, 1, 0.2f)));
-
-            if (!isUnlocked)
-            {
-                CanvasGroup cg = card.AddComponent<CanvasGroup>();
-                cg.alpha = 0.4f;
-            }
-
             Color textColor = isEquipped ? Color.black : Color.white;
 
-            Text nameText = CreateTextElement(card.transform, "Name", trail.name.ToUpper(), 38, textColor, TextAnchor.UpperLeft);
+            GameObject card = new GameObject("Trail_" + trail.id, typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(VerticalLayoutGroup));
+            card.transform.SetParent(parent, false);
+            card.GetComponent<Image>().color = isEquipped ? Color.white : Color.black;
+            card.GetComponent<LayoutElement>().preferredHeight = 220;
+            AddOutline(card, isEquipped ? Color.white : (isUnlocked ? new Color(1, 1, 1, 0.5f) : new Color(1, 1, 1, 0.2f)));
+            VerticalLayoutGroup vlg = card.GetComponent<VerticalLayoutGroup>();
+            vlg.padding = new RectOffset(24, 24, 16, 16);
+            vlg.spacing = 4;
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+            if (!isUnlocked) card.AddComponent<CanvasGroup>().alpha = 0.4f;
+
+            Text nameText = CreateTextElement(card.transform, "Name", trail.name.ToUpper(), 38, textColor, TextAnchor.MiddleLeft);
             nameText.fontStyle = FontStyle.Bold;
-            PositionText(nameText, new Vector2(24, -16), new Vector2(-24, -42));
+            SetHeight(nameText.gameObject, 44);
 
-            Text perkText = CreateTextElement(card.transform, "Perk", trail.perk, 26, isEquipped ? new Color(0, 0, 0, 0.7f) : new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
-            PositionText(perkText, new Vector2(24, -60), new Vector2(-24, -35));
+            Text perkText = CreateTextElement(card.transform, "Perk", trail.perk, 26,
+                isEquipped ? new Color(0, 0, 0, 0.7f) : new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
+            perkText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            SetHeight(perkText.gameObject, 50);
 
-            if (isEquipped)
-            {
-                GameObject badge = new GameObject("EquipBadge", typeof(RectTransform), typeof(Image));
-                badge.transform.SetParent(card.transform, false);
-                badge.GetComponent<Image>().color = Color.black;
-                AddOutline(badge);
-                RectTransform atRt = badge.GetComponent<RectTransform>();
-                atRt.anchorMin = new Vector2(1, 1);
-                atRt.anchorMax = new Vector2(1, 1);
-                atRt.pivot = new Vector2(1, 1);
-                atRt.sizeDelta = new Vector2(140, 36);
-                atRt.anchoredPosition = new Vector2(-15, -15);
-                Text activeTxt = CreateTextElement(badge.transform, "Lbl", "EQUIPPED", 20, Color.white, TextAnchor.MiddleCenter);
-                activeTxt.fontStyle = FontStyle.Bold;
-                activeTxt.raycastTarget = false;
-                FillRect(activeTxt);
-            }
+            AddFlexSpacer(card.transform);
 
             string btnLabel = isUnlocked ? (isEquipped ? "EQUIPPED" : "INITIALIZE") : "LOCKED";
-            GameObject actionBtn = new GameObject("Action", typeof(RectTransform), typeof(Image), typeof(Button));
+            GameObject actionBtn = new GameObject("Action", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             actionBtn.transform.SetParent(card.transform, false);
             actionBtn.GetComponent<Image>().color = Color.black;
-            Outline abOl = actionBtn.AddComponent<Outline>();
-            abOl.effectColor = isEquipped ? Color.black : (isUnlocked ? Color.white : new Color(1, 1, 1, 0.2f));
-            abOl.effectDistance = new Vector2(1, -1);
-            RectTransform abRt = actionBtn.GetComponent<RectTransform>();
-            abRt.anchorMin = new Vector2(0, 0);
-            abRt.anchorMax = new Vector2(1, 0);
-            abRt.pivot = new Vector2(0.5f, 0);
-            abRt.sizeDelta = new Vector2(-30, 60);
-            abRt.anchoredPosition = new Vector2(0, 15);
-
+            actionBtn.GetComponent<LayoutElement>().preferredHeight = 55;
+            AddOutline(actionBtn, isEquipped ? Color.black : (isUnlocked ? Color.white : new Color(1, 1, 1, 0.2f)));
             Text abTxt = CreateTextElement(actionBtn.transform, "Lbl", btnLabel, 22,
                 isEquipped ? Color.white : (isUnlocked ? Color.white : new Color(1, 1, 1, 0.3f)), TextAnchor.MiddleCenter);
-            abTxt.fontStyle = FontStyle.Bold;
-            abTxt.raycastTarget = false;
-            FillRect(abTxt);
-
+            abTxt.fontStyle = FontStyle.Bold; abTxt.raycastTarget = false; FillRect(abTxt);
             if (isUnlocked && !isEquipped)
             {
                 string capturedId = trail.id;
-                actionBtn.GetComponent<Button>().onClick.AddListener(() =>
-                {
-                    ps.ActiveTrail = capturedId;
-                    RefreshContent();
-                });
+                actionBtn.GetComponent<Button>().onClick.AddListener(() => { ps.ActiveTrail = capturedId; RefreshContent(); });
+            }
+
+            if (isEquipped)
+            {
+                GameObject badge = new GameObject("EquipBadge", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+                badge.transform.SetParent(card.transform, false);
+                badge.GetComponent<Image>().color = Color.black;
+                badge.GetComponent<LayoutElement>().ignoreLayout = true;
+                AddOutline(badge);
+                RectTransform atRt = badge.GetComponent<RectTransform>();
+                atRt.anchorMin = new Vector2(1, 1); atRt.anchorMax = new Vector2(1, 1);
+                atRt.pivot = new Vector2(1, 1);
+                atRt.sizeDelta = new Vector2(140, 32);
+                atRt.anchoredPosition = new Vector2(-24, -16);
+                Text activeTxt = CreateTextElement(badge.transform, "Lbl", "EQUIPPED", 20, Color.white, TextAnchor.MiddleCenter);
+                activeTxt.fontStyle = FontStyle.Bold; activeTxt.raycastTarget = false; FillRect(activeTxt);
             }
         }
     }
@@ -869,166 +842,160 @@ public class UIManager : MonoBehaviour
     {
         var ps = PlayerState.Instance;
 
-        // Header
         Text title = CreateTextElement(parent, "Title", "PROGRESSION", 64, Color.white, TextAnchor.MiddleLeft);
         title.fontStyle = FontStyle.Bold;
         SetHeight(title.gameObject, 70);
 
-        Text subtitle = CreateTextElement(parent, "Sub", $"Earn stars to unlock. Current Level: [{ps.AccountLevel}]", 24, new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
+        Text subtitle = CreateTextElement(parent, "Sub", $"Earn stars to unlock. Current Level: [{ps.AccountLevel}]", 26, new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
         SetHeight(subtitle.gameObject, 35);
 
-        // Premium status
-        GameObject premRow = CreateLayoutItem(parent, "PremRow", 80);
+        // Premium status button
+        GameObject premRow = new GameObject("PremRow", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+        premRow.transform.SetParent(parent, false);
+        premRow.GetComponent<Image>().color = Color.black;
+        premRow.GetComponent<LayoutElement>().preferredHeight = 65;
         AddOutline(premRow);
         if (ps.IsPremium)
         {
             Text premTxt = CreateTextElement(premRow.transform, "Prem", "\u265B PREMIUM ACTIVE", 28, Color.white, TextAnchor.MiddleCenter);
-            premTxt.fontStyle = FontStyle.Bold;
-            FillRect(premTxt);
+            premTxt.fontStyle = FontStyle.Bold; FillRect(premTxt);
         }
         else
         {
             GameObject premBtn = new GameObject("PremBtn", typeof(RectTransform), typeof(Image), typeof(Button));
-            premBtn.transform.SetParent(premRow.transform, false);
-            FillRect(premBtn);
+            premBtn.transform.SetParent(premRow.transform, false); FillRect(premBtn);
             premBtn.GetComponent<Image>().color = Color.black;
             Text premBtnTxt = CreateTextElement(premBtn.transform, "Lbl", "\u265B UPGRADE PASS", 28, Color.white, TextAnchor.MiddleCenter);
-            premBtnTxt.fontStyle = FontStyle.Bold;
-            premBtnTxt.raycastTarget = false;
-            FillRect(premBtnTxt);
-            premBtn.GetComponent<Button>().onClick.AddListener(() =>
-            {
-                ps.IsPremium = true;
-                RefreshContent();
-            });
+            premBtnTxt.fontStyle = FontStyle.Bold; premBtnTxt.raycastTarget = false; FillRect(premBtnTxt);
+            premBtn.GetComponent<Button>().onClick.AddListener(() => { ps.IsPremium = true; RefreshContent(); });
         }
 
         AddSeparator(parent);
 
-        // Tiers (vertical list for mobile)
+        // Tiers - each tier is a VLG card
         foreach (var tier in GameData.BATTLE_PASS_TIERS)
         {
             bool isUnlocked = ps.AccountLevel >= tier.level;
             bool freeClaimed = ps.ClaimedRewards.Contains(tier.level + "-free");
             bool premiumClaimed = ps.ClaimedRewards.Contains(tier.level + "-premium");
 
-            GameObject tierCard = CreateLayoutItem(parent, "Tier" + tier.level, 360);
+            GameObject tierCard = new GameObject("Tier" + tier.level, typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(VerticalLayoutGroup));
+            tierCard.transform.SetParent(parent, false);
             tierCard.GetComponent<Image>().color = Color.black;
+            tierCard.GetComponent<LayoutElement>().preferredHeight = 390;
             AddOutline(tierCard, isUnlocked ? Color.white : new Color(1, 1, 1, 0.3f));
+            VerticalLayoutGroup vlg = tierCard.GetComponent<VerticalLayoutGroup>();
+            vlg.padding = new RectOffset(0, 0, 0, 0);
+            vlg.spacing = 0;
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+            if (!isUnlocked) tierCard.AddComponent<CanvasGroup>().alpha = 0.7f;
 
-            if (!isUnlocked)
-            {
-                CanvasGroup cg = tierCard.AddComponent<CanvasGroup>();
-                cg.alpha = 0.7f;
-            }
-
-            // Tier header
-            GameObject tierHeader = new GameObject("TierHeader", typeof(RectTransform), typeof(Image));
+            // Tier header bar
+            GameObject tierHeader = new GameObject("TierHeader", typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(HorizontalLayoutGroup));
             tierHeader.transform.SetParent(tierCard.transform, false);
             tierHeader.GetComponent<Image>().color = isUnlocked ? Color.white : new Color(0.2f, 0.2f, 0.2f);
-            RectTransform thRt = tierHeader.GetComponent<RectTransform>();
-            thRt.anchorMin = new Vector2(0, 1);
-            thRt.anchorMax = new Vector2(1, 1);
-            thRt.pivot = new Vector2(0.5f, 1);
-            thRt.sizeDelta = new Vector2(0, 60);
-            thRt.anchoredPosition = Vector2.zero;
+            tierHeader.GetComponent<LayoutElement>().preferredHeight = 55;
+            HorizontalLayoutGroup thHlg = tierHeader.GetComponent<HorizontalLayoutGroup>();
+            thHlg.padding = new RectOffset(15, 15, 0, 0);
+            thHlg.childForceExpandHeight = true;
+            thHlg.childForceExpandWidth = false;
 
-            Text tierTitle = CreateTextElement(tierHeader.transform, "TTitle", $"TIER {tier.level}", 28,
-                isUnlocked ? Color.black : new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
+            Color headerColor = isUnlocked ? Color.black : new Color(1, 1, 1, 0.7f);
+            Text tierTitle = CreateTextElement(tierHeader.transform, "TTitle", $"TIER {tier.level}", 28, headerColor, TextAnchor.MiddleLeft);
             tierTitle.fontStyle = FontStyle.Bold;
-            PositionText(tierTitle, new Vector2(15, 0), new Vector2(-150, 0));
+            tierTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
 
-            Text starsReq = CreateTextElement(tierHeader.transform, "StarsReq", $"{tier.starsReq} \u2605", 22,
-                isUnlocked ? Color.black : new Color(1, 1, 1, 0.7f), TextAnchor.MiddleRight);
+            Text starsReq = CreateTextElement(tierHeader.transform, "Stars", $"{tier.starsReq} \u2605", 22, headerColor, TextAnchor.MiddleRight);
             starsReq.fontStyle = FontStyle.Bold;
-            RectTransform srRt = starsReq.GetComponent<RectTransform>();
-            srRt.anchorMin = new Vector2(1, 0);
-            srRt.anchorMax = new Vector2(1, 1);
-            srRt.pivot = new Vector2(1, 0.5f);
-            srRt.sizeDelta = new Vector2(130, 0);
-            srRt.anchoredPosition = new Vector2(-10, 0);
+            starsReq.gameObject.AddComponent<LayoutElement>().preferredWidth = 100;
 
-            // Free reward section
-            float yOff = -70;
-            Text freeLabel = CreateTextElement(tierCard.transform, "FreeLabel", "FREE", 20, new Color(1, 1, 1, 0.5f), TextAnchor.UpperLeft);
+            // Free section - VLG
+            GameObject freeSection = new GameObject("FreeSection", typeof(RectTransform), typeof(LayoutElement), typeof(VerticalLayoutGroup));
+            freeSection.transform.SetParent(tierCard.transform, false);
+            freeSection.GetComponent<LayoutElement>().preferredHeight = 165;
+            VerticalLayoutGroup fsVlg = freeSection.GetComponent<VerticalLayoutGroup>();
+            fsVlg.padding = new RectOffset(15, 15, 10, 10);
+            fsVlg.spacing = 4;
+            fsVlg.childForceExpandWidth = true;
+            fsVlg.childForceExpandHeight = false;
+
+            Text freeLabel = CreateTextElement(freeSection.transform, "FreeLabel", "FREE", 20, new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
             freeLabel.fontStyle = FontStyle.Bold;
-            PositionTextAbs(freeLabel, new Vector2(15, yOff), new Vector2(200, 25));
+            SetHeight(freeLabel.gameObject, 24);
 
             string freeNameStr = (tier.free.type == "ship" ? "\u2708 " : "") + tier.free.name;
-            Text freeName = CreateTextElement(tierCard.transform, "FreeName", freeNameStr, 28, Color.white, TextAnchor.UpperLeft);
+            Text freeName = CreateTextElement(freeSection.transform, "FreeName", freeNameStr, 28, Color.white, TextAnchor.MiddleLeft);
             freeName.fontStyle = FontStyle.Bold;
-            PositionTextAbs(freeName, new Vector2(15, yOff - 30), new Vector2(500, 35));
+            SetHeight(freeName.gameObject, 34);
 
             if (tier.free.credits > 0)
             {
-                Text credTxt = CreateTextElement(tierCard.transform, "FreeCred", $"\u25C9 +{tier.free.credits} CREDITS", 20, new Color(1f, 0.84f, 0f), TextAnchor.UpperLeft);
+                Text credTxt = CreateTextElement(freeSection.transform, "FreeCred", $"\u25C9 +{tier.free.credits} CREDITS", 20, new Color(1f, 0.84f, 0f), TextAnchor.MiddleLeft);
                 credTxt.fontStyle = FontStyle.Bold;
-                PositionTextAbs(credTxt, new Vector2(15, yOff - 65), new Vector2(300, 25));
+                SetHeight(credTxt.gameObject, 24);
             }
 
-            // Free claim button
-            float btnY = yOff - 95;
+            AddFlexSpacer(freeSection.transform);
+
             if (isUnlocked)
             {
                 if (freeClaimed)
                 {
-                    Text claimedTxt = CreateTextElement(tierCard.transform, "Claimed", "\u2713 CLAIMED", 22, Color.white, TextAnchor.MiddleLeft);
+                    Text claimedTxt = CreateTextElement(freeSection.transform, "Claimed", "\u2713 CLAIMED", 22, Color.white, TextAnchor.MiddleLeft);
                     claimedTxt.fontStyle = FontStyle.Bold;
-                    PositionTextAbs(claimedTxt, new Vector2(15, btnY), new Vector2(200, 40));
+                    SetHeight(claimedTxt.gameObject, 30);
                 }
                 else
                 {
-                    int capturedTier = tier.level;
-                    AddClaimButton(tierCard.transform, "CLAIM FREE", new Vector2(15, btnY), false, () =>
-                    {
-                        ps.ClaimReward(capturedTier, false);
-                        RefreshTopNav();
-                        RefreshContent();
-                    });
+                    int ct = tier.level;
+                    AddFullWidthButton(freeSection.transform, "CLAIM FREE", 40, () => { ps.ClaimReward(ct, false); RefreshTopNav(); RefreshContent(); });
                 }
             }
             else
             {
-                Text lockTxt = CreateTextElement(tierCard.transform, "Lock", "\u26BF", 32, new Color(1, 1, 1, 0.3f), TextAnchor.MiddleLeft);
-                PositionTextAbs(lockTxt, new Vector2(15, btnY), new Vector2(50, 40));
+                Text lockTxt = CreateTextElement(freeSection.transform, "Lock", "\u26BF LOCKED", 22, new Color(1, 1, 1, 0.3f), TextAnchor.MiddleLeft);
+                SetHeight(lockTxt.gameObject, 30);
             }
 
-            // Premium section
-            float premY = -225;
-            GameObject premSection = new GameObject("PremSection", typeof(RectTransform), typeof(Image));
+            // Premium section - VLG with bg color
+            GameObject premSection = new GameObject("PremSection", typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(VerticalLayoutGroup));
             premSection.transform.SetParent(tierCard.transform, false);
             premSection.GetComponent<Image>().color = ps.IsPremium ? Color.white : new Color(0.1f, 0.1f, 0.1f);
-            RectTransform psRt = premSection.GetComponent<RectTransform>();
-            psRt.anchorMin = new Vector2(0, 0);
-            psRt.anchorMax = new Vector2(1, 0);
-            psRt.pivot = new Vector2(0.5f, 0);
-            psRt.sizeDelta = new Vector2(0, 130);
-            psRt.anchoredPosition = Vector2.zero;
+            premSection.GetComponent<LayoutElement>().preferredHeight = 165;
+            premSection.GetComponent<LayoutElement>().flexibleHeight = 1;
+            VerticalLayoutGroup psVlg = premSection.GetComponent<VerticalLayoutGroup>();
+            psVlg.padding = new RectOffset(15, 15, 10, 10);
+            psVlg.spacing = 4;
+            psVlg.childForceExpandWidth = true;
+            psVlg.childForceExpandHeight = false;
 
             Color premTextColor = ps.IsPremium ? Color.black : Color.white;
 
-            Text premLabel = CreateTextElement(premSection.transform, "PremLabel", "\u265B PREMIUM", 20, premTextColor * 0.7f, TextAnchor.UpperLeft);
+            Text premLabel = CreateTextElement(premSection.transform, "PremLabel", "\u265B PREMIUM", 20, premTextColor * 0.7f, TextAnchor.MiddleLeft);
             premLabel.fontStyle = FontStyle.Bold;
-            PositionText(premLabel, new Vector2(15, -10), new Vector2(-30, -20));
+            SetHeight(premLabel.gameObject, 24);
 
-            Text premName = CreateTextElement(premSection.transform, "PremName", tier.premium.name, 28, premTextColor, TextAnchor.UpperLeft);
+            Text premName = CreateTextElement(premSection.transform, "PremName", tier.premium.name, 28, premTextColor, TextAnchor.MiddleLeft);
             premName.fontStyle = FontStyle.Bold;
-            PositionText(premName, new Vector2(15, -35), new Vector2(-30, -30));
+            SetHeight(premName.gameObject, 34);
 
             if (tier.premium.credits > 0)
             {
                 Color credColor = ps.IsPremium ? new Color(0, 0, 0, 0.7f) : new Color(1f, 0.84f, 0f);
-                Text premCred = CreateTextElement(premSection.transform, "PremCred", $"\u25C9 +{tier.premium.credits} CREDITS", 20, credColor, TextAnchor.UpperLeft);
+                Text premCred = CreateTextElement(premSection.transform, "PremCred", $"\u25C9 +{tier.premium.credits} CREDITS", 20, credColor, TextAnchor.MiddleLeft);
                 premCred.fontStyle = FontStyle.Bold;
-                PositionText(premCred, new Vector2(15, -65), new Vector2(-30, -20));
+                SetHeight(premCred.gameObject, 24);
             }
+
+            AddFlexSpacer(premSection.transform);
 
             if (!ps.IsPremium)
             {
-                // Lock overlay
-                GameObject lockOverlay = new GameObject("LockOvr", typeof(RectTransform), typeof(Image));
+                GameObject lockOverlay = new GameObject("LockOvr", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
                 lockOverlay.transform.SetParent(premSection.transform, false);
                 lockOverlay.GetComponent<Image>().color = new Color(0, 0, 0, 0.8f);
+                lockOverlay.GetComponent<LayoutElement>().ignoreLayout = true;
                 FillRect(lockOverlay);
                 Text lockIcon = CreateTextElement(lockOverlay.transform, "LockIcon", "\u26BF", 48, new Color(1, 1, 1, 0.5f), TextAnchor.MiddleCenter);
                 FillRect(lockIcon);
@@ -1037,32 +1004,20 @@ public class UIManager : MonoBehaviour
             {
                 if (premiumClaimed)
                 {
-                    Text pClaimedTxt = CreateTextElement(premSection.transform, "PClaimed", "\u2713 CLAIMED", 22, Color.black, TextAnchor.LowerLeft);
+                    Text pClaimedTxt = CreateTextElement(premSection.transform, "PClaimed", "\u2713 CLAIMED", 22, Color.black, TextAnchor.MiddleLeft);
                     pClaimedTxt.fontStyle = FontStyle.Bold;
-                    PositionText(pClaimedTxt, new Vector2(15, 10), new Vector2(-30, -30));
+                    SetHeight(pClaimedTxt.gameObject, 30);
                 }
                 else
                 {
-                    int capturedTier = tier.level;
-                    GameObject claimBtn = new GameObject("ClaimPrem", typeof(RectTransform), typeof(Image), typeof(Button));
+                    int ct = tier.level;
+                    GameObject claimBtn = new GameObject("ClaimPrem", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
                     claimBtn.transform.SetParent(premSection.transform, false);
                     claimBtn.GetComponent<Image>().color = Color.black;
-                    RectTransform cbRt = claimBtn.GetComponent<RectTransform>();
-                    cbRt.anchorMin = new Vector2(0, 0);
-                    cbRt.anchorMax = new Vector2(1, 0);
-                    cbRt.pivot = new Vector2(0.5f, 0);
-                    cbRt.sizeDelta = new Vector2(-30, 40);
-                    cbRt.anchoredPosition = new Vector2(0, 10);
+                    claimBtn.GetComponent<LayoutElement>().preferredHeight = 40;
                     Text cbTxt = CreateTextElement(claimBtn.transform, "Lbl", "CLAIM PREM", 22, Color.white, TextAnchor.MiddleCenter);
-                    cbTxt.fontStyle = FontStyle.Bold;
-                    cbTxt.raycastTarget = false;
-                    FillRect(cbTxt);
-                    claimBtn.GetComponent<Button>().onClick.AddListener(() =>
-                    {
-                        ps.ClaimReward(capturedTier, true);
-                        RefreshTopNav();
-                        RefreshContent();
-                    });
+                    cbTxt.fontStyle = FontStyle.Bold; cbTxt.raycastTarget = false; FillRect(cbTxt);
+                    claimBtn.GetComponent<Button>().onClick.AddListener(() => { ps.ClaimReward(ct, true); RefreshTopNav(); RefreshContent(); });
                 }
             }
         }
@@ -1076,90 +1031,89 @@ public class UIManager : MonoBehaviour
         Text title = CreateTextElement(parent, "Title", "CURRENCY TERMINAL", 64, Color.white, TextAnchor.MiddleLeft);
         title.fontStyle = FontStyle.Bold;
         SetHeight(title.gameObject, 80);
-
         AddSeparator(parent);
 
-        // Credit packs
+        // Credit packs - each with VLG
         foreach (var pack in GameData.CREDIT_PACKS)
         {
-            GameObject card = CreateLayoutItem(parent, "Pack_" + pack.amount, 180);
+            GameObject card = new GameObject("Pack_" + pack.amount, typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(VerticalLayoutGroup));
+            card.transform.SetParent(parent, false);
+            card.GetComponent<Image>().color = Color.black;
+            card.GetComponent<LayoutElement>().preferredHeight = 160;
             AddOutline(card);
+            VerticalLayoutGroup vlg = card.GetComponent<VerticalLayoutGroup>();
+            vlg.padding = new RectOffset(20, 20, 20, 20);
+            vlg.spacing = 10;
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+            vlg.childAlignment = TextAnchor.MiddleCenter;
 
-            Text amountTxt = CreateTextElement(card.transform, "Amount", $"\u25C9 {pack.amount} CREDITS +", 40, new Color(1f, 0.84f, 0f), TextAnchor.MiddleCenter);
+            Text amountTxt = CreateTextElement(card.transform, "Amount", $"\u25C9 {pack.amount} CREDITS +", 42, new Color(1f, 0.84f, 0f), TextAnchor.MiddleCenter);
             amountTxt.fontStyle = FontStyle.Bold;
-            PositionText(amountTxt, new Vector2(0, 20), new Vector2(-20, -60));
+            SetHeight(amountTxt.gameObject, 50);
+
+            AddFlexSpacer(card.transform);
 
             int capturedAmount = pack.amount;
-            GameObject buyBtn = new GameObject("Buy", typeof(RectTransform), typeof(Image), typeof(Button));
+            GameObject buyBtn = new GameObject("Buy", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             buyBtn.transform.SetParent(card.transform, false);
             buyBtn.GetComponent<Image>().color = Color.white;
-            RectTransform bbRt = buyBtn.GetComponent<RectTransform>();
-            bbRt.anchorMin = new Vector2(0.1f, 0);
-            bbRt.anchorMax = new Vector2(0.9f, 0);
-            bbRt.pivot = new Vector2(0.5f, 0);
-            bbRt.sizeDelta = new Vector2(0, 60);
-            bbRt.anchoredPosition = new Vector2(0, 15);
-
+            buyBtn.GetComponent<LayoutElement>().preferredHeight = 55;
             Text buyTxt = CreateTextElement(buyBtn.transform, "Lbl", "ACQUIRE " + pack.price, 24, Color.black, TextAnchor.MiddleCenter);
-            buyTxt.fontStyle = FontStyle.Bold;
-            buyTxt.raycastTarget = false;
-            FillRect(buyTxt);
-
-            buyBtn.GetComponent<Button>().onClick.AddListener(() =>
-            {
-                SimulatePurchase(capturedAmount);
-            });
+            buyTxt.fontStyle = FontStyle.Bold; buyTxt.raycastTarget = false; FillRect(buyTxt);
+            buyBtn.GetComponent<Button>().onClick.AddListener(() => { SimulatePurchase(capturedAmount); });
         }
 
         AddSpacer(parent, 30);
 
-        Text puHeader = CreateTextElement(parent, "PUHeader", "\u26A1 POWER UPS", 36, new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
+        Text puHeader = CreateTextElement(parent, "PUHeader", "\u26A1 POWER UPS", 42, new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
         puHeader.fontStyle = FontStyle.Bold;
         SetHeight(puHeader.gameObject, 50);
-
         AddSeparator(parent);
 
-        // Power up items
+        // Power up items - VLG layout
         foreach (var item in GameData.SHOP_ITEMS)
         {
-            GameObject card = CreateLayoutItem(parent, "Item_" + item.name, 180);
+            GameObject card = new GameObject("Item_" + item.name, typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(VerticalLayoutGroup));
+            card.transform.SetParent(parent, false);
+            card.GetComponent<Image>().color = Color.black;
+            card.GetComponent<LayoutElement>().preferredHeight = 160;
             AddOutline(card, new Color(1, 1, 1, 0.5f));
+            VerticalLayoutGroup vlg = card.GetComponent<VerticalLayoutGroup>();
+            vlg.padding = new RectOffset(20, 20, 15, 15);
+            vlg.spacing = 4;
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
 
-            Text nameText = CreateTextElement(card.transform, "Name", $"{item.name.ToUpper()} x{item.qty}", 28, Color.white, TextAnchor.UpperLeft);
+            Text nameText = CreateTextElement(card.transform, "Name", $"{item.name.ToUpper()} x{item.qty}", 30, Color.white, TextAnchor.MiddleLeft);
             nameText.fontStyle = FontStyle.Bold;
-            PositionText(nameText, new Vector2(20, -15), new Vector2(-20, -35));
+            SetHeight(nameText.gameObject, 34);
 
-            Text descText = CreateTextElement(card.transform, "Desc", item.desc.ToUpper(), 20, new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
-            PositionText(descText, new Vector2(20, -50), new Vector2(-20, -30));
+            Text descText = CreateTextElement(card.transform, "Desc", item.desc.ToUpper(), 22, new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
+            descText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            SetHeight(descText.gameObject, 30);
 
-            // Price
-            string priceStr = item.originalCost > 0 ? $"\u25C9 {item.cost} CREDITS" : $"\u25C9 {item.cost} CREDITS";
-            Text priceTxt = CreateTextElement(card.transform, "Price", priceStr, 24, new Color(1f, 0.84f, 0f), TextAnchor.LowerLeft);
+            AddFlexSpacer(card.transform);
+
+            // Price + Buy row
+            GameObject priceRow = CreateHLayout(card.transform, "PriceRow", Vector2.zero, TextAnchor.MiddleLeft);
+            SetHeight(priceRow, 44);
+            priceRow.GetComponent<HorizontalLayoutGroup>().childForceExpandWidth = false;
+
+            string priceStr = $"\u25C9 {item.cost} CREDITS";
+            if (item.originalCost > 0) priceStr = $"\u25C9 {item.cost} CREDITS (was {item.originalCost})";
+            Text priceTxt = CreateTextElement(priceRow.transform, "Price", priceStr, 22, new Color(1f, 0.84f, 0f), TextAnchor.MiddleLeft);
             priceTxt.fontStyle = FontStyle.Bold;
-            PositionText(priceTxt, new Vector2(20, 15), new Vector2(-200, -30));
+            LayoutElement plLe = priceTxt.gameObject.AddComponent<LayoutElement>();
+            plLe.flexibleWidth = 1;
 
-            if (item.originalCost > 0)
-            {
-                Text origTxt = CreateTextElement(card.transform, "Orig", $"{item.originalCost} CREDITS", 18, new Color(1, 0.3f, 0.3f), TextAnchor.LowerLeft);
-                origTxt.fontStyle = FontStyle.Italic;
-                PositionText(origTxt, new Vector2(20, 40), new Vector2(-200, -20));
-            }
-
-            // Buy button
-            GameObject buyBtn = new GameObject("Buy", typeof(RectTransform), typeof(Image), typeof(Button));
-            buyBtn.transform.SetParent(card.transform, false);
+            GameObject buyBtn = new GameObject("Buy", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            buyBtn.transform.SetParent(priceRow.transform, false);
             buyBtn.GetComponent<Image>().color = Color.white;
-            RectTransform bbRt = buyBtn.GetComponent<RectTransform>();
-            bbRt.anchorMin = new Vector2(1, 0);
-            bbRt.anchorMax = new Vector2(1, 0);
-            bbRt.pivot = new Vector2(1, 0);
-            bbRt.sizeDelta = new Vector2(150, 50);
-            bbRt.anchoredPosition = new Vector2(-15, 15);
-
+            buyBtn.GetComponent<LayoutElement>().preferredWidth = 120;
+            buyBtn.GetComponent<LayoutElement>().preferredHeight = 40;
             Text buyTxt = CreateTextElement(buyBtn.transform, "Lbl", "BUY", 22, Color.black, TextAnchor.MiddleCenter);
-            buyTxt.fontStyle = FontStyle.Bold;
-            buyTxt.raycastTarget = false;
-            FillRect(buyTxt);
+            buyTxt.fontStyle = FontStyle.Bold; buyTxt.raycastTarget = false; FillRect(buyTxt);
         }
     }
 
@@ -1173,7 +1127,6 @@ public class UIManager : MonoBehaviour
     void ShowLoadout(int u, int s, int l, bool requiresAd)
     {
         loadoutU = u; loadoutS = s; loadoutL = l; loadoutRequiresAd = requiresAd;
-        loadoutOpen = true;
         loadoutPanel.SetActive(true);
         RebuildLoadout();
     }
@@ -1228,15 +1181,19 @@ public class UIManager : MonoBehaviour
             if (!ps.UnlockedShips.Contains(ship.id)) continue;
             bool isEquipped = ps.ActiveShips.Contains(ship.id);
 
-            GameObject shipRow = CreateLayoutItem(container.transform, "Ship_" + ship.id, 60);
+            GameObject shipRow = new GameObject("Ship_" + ship.id, typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(HorizontalLayoutGroup));
+            shipRow.transform.SetParent(container.transform, false);
             shipRow.GetComponent<Image>().color = isEquipped ? Color.white : Color.black;
+            shipRow.GetComponent<LayoutElement>().preferredHeight = 60;
             AddOutline(shipRow, isEquipped ? Color.white : new Color(1, 1, 1, 0.3f));
+            HorizontalLayoutGroup srHlg = shipRow.GetComponent<HorizontalLayoutGroup>();
+            srHlg.padding = new RectOffset(15, 15, 0, 0);
+            srHlg.childForceExpandHeight = true;
 
             Text shipTxt = CreateTextElement(shipRow.transform, "Name",
                 (isEquipped ? "\u2713 " : "") + ship.name.ToUpper(), 24,
                 isEquipped ? Color.black : new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
             shipTxt.fontStyle = FontStyle.Bold;
-            PositionText(shipTxt, new Vector2(15, 0), new Vector2(-30, 0));
 
             string capturedId = ship.id;
             Button shipBtn = shipRow.AddComponent<Button>();
@@ -1258,15 +1215,19 @@ public class UIManager : MonoBehaviour
             var mech = GameData.SECTOR_MECHANICS[mechId];
             bool isMet = string.IsNullOrEmpty(mech.reqShip) || ps.ActiveShips.Contains(mech.reqShip);
 
-            GameObject hazRow = CreateLayoutItem(container.transform, "Haz_" + mechId, 60);
+            GameObject hazRow = new GameObject("Haz_" + mechId, typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(HorizontalLayoutGroup));
+            hazRow.transform.SetParent(container.transform, false);
             hazRow.GetComponent<Image>().color = Color.black;
+            hazRow.GetComponent<LayoutElement>().preferredHeight = 60;
             AddOutline(hazRow, isMet ? mech.color : Color.red);
+            HorizontalLayoutGroup hzHlg = hazRow.GetComponent<HorizontalLayoutGroup>();
+            hzHlg.padding = new RectOffset(15, 15, 0, 0);
+            hzHlg.childForceExpandHeight = true;
 
             string status = isMet ? "Addressed by Fleet" : ("Missing: " + (GameData.SHIPS.ContainsKey(mech.reqShip) ? GameData.SHIPS[mech.reqShip].name : "Unknown"));
             Text hazTxt = CreateTextElement(hazRow.transform, "Haz", $"\u26A0 {mech.name.ToUpper()} - {status}", 22,
                 isMet ? mech.color : Color.red, TextAnchor.MiddleLeft);
             hazTxt.fontStyle = FontStyle.Bold;
-            PositionText(hazTxt, new Vector2(15, 0), new Vector2(-30, 0));
         }
 
         // Spacer
@@ -1590,18 +1551,20 @@ public class UIManager : MonoBehaviour
             var ship = GameData.SHIPS[id];
             bool isActive = (id == activeShipId);
 
-            GameObject shipBtn = new GameObject("Ship_" + id, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            GameObject shipBtn = new GameObject("Ship_" + id, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement), typeof(HorizontalLayoutGroup));
             shipBtn.transform.SetParent(box.transform, false);
             shipBtn.GetComponent<Image>().color = isActive ? Color.white : Color.black;
             AddOutline(shipBtn, isActive ? Color.white : new Color(1, 1, 1, 0.3f));
             shipBtn.GetComponent<LayoutElement>().preferredHeight = 70;
+            HorizontalLayoutGroup sbHlg = shipBtn.GetComponent<HorizontalLayoutGroup>();
+            sbHlg.padding = new RectOffset(20, 20, 0, 0);
+            sbHlg.childForceExpandHeight = true;
 
             Text shipTxt = CreateTextElement(shipBtn.transform, "Name",
                 (isActive ? "\u2713 " : "") + ship.name.Split(' ')[0].ToUpper(), 24,
                 isActive ? Color.black : Color.white, TextAnchor.MiddleLeft);
             shipTxt.fontStyle = FontStyle.Bold;
             shipTxt.raycastTarget = false;
-            PositionText(shipTxt, new Vector2(20, 0), new Vector2(-40, 0));
 
             string capturedId = id;
             shipBtn.GetComponent<Button>().onClick.AddListener(() => onSelect(capturedId));
@@ -1651,16 +1614,19 @@ public class UIManager : MonoBehaviour
             int st = ps.GetLevelScore(u, s, l);
             totalStars += st;
 
-            GameObject row = CreateLayoutItem(box.transform, "Row" + l, 40);
+            GameObject row = new GameObject("Row" + l, typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(HorizontalLayoutGroup));
+            row.transform.SetParent(box.transform, false);
+            row.GetComponent<Image>().color = Color.black;
+            row.GetComponent<LayoutElement>().preferredHeight = 40;
+            HorizontalLayoutGroup rowHlg = row.GetComponent<HorizontalLayoutGroup>();
+            rowHlg.childForceExpandHeight = true;
+            rowHlg.childForceExpandWidth = false;
+
             Text leftTxt = CreateTextElement(row.transform, "Left", "", 28, new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
-            PositionText(leftTxt, new Vector2(0, 0), new Vector2(-100, 0));
+            leftTxt.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
 
             Text rightTxt = CreateTextElement(row.transform, "Right", "", 28, Color.white, TextAnchor.MiddleRight);
-            RectTransform rrRt = rightTxt.GetComponent<RectTransform>();
-            rrRt.anchorMin = new Vector2(0.5f, 0);
-            rrRt.anchorMax = new Vector2(1, 1);
-            rrRt.offsetMin = Vector2.zero;
-            rrRt.offsetMax = Vector2.zero;
+            rightTxt.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
 
             // Typewriter effect
             string leftStr = $"LEVEL {l}";
@@ -1674,18 +1640,21 @@ public class UIManager : MonoBehaviour
         AddSeparatorIn(box.transform);
 
         // Total
-        GameObject totalRow = CreateLayoutItem(box.transform, "Total", 50);
+        GameObject totalRow = new GameObject("Total", typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(HorizontalLayoutGroup));
+        totalRow.transform.SetParent(box.transform, false);
+        totalRow.GetComponent<Image>().color = Color.black;
+        totalRow.GetComponent<LayoutElement>().preferredHeight = 50;
+        HorizontalLayoutGroup tRowHlg = totalRow.GetComponent<HorizontalLayoutGroup>();
+        tRowHlg.childForceExpandHeight = true;
+        tRowHlg.childForceExpandWidth = false;
+
         Text totalLeftTxt = CreateTextElement(totalRow.transform, "TLeft", "", 32, Color.white, TextAnchor.MiddleLeft);
         totalLeftTxt.fontStyle = FontStyle.Bold;
-        PositionText(totalLeftTxt, new Vector2(0, 0), new Vector2(-100, 0));
+        totalLeftTxt.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
 
         Text totalRightTxt = CreateTextElement(totalRow.transform, "TRight", "", 32, Color.white, TextAnchor.MiddleRight);
         totalRightTxt.fontStyle = FontStyle.Bold;
-        RectTransform trRt = totalRightTxt.GetComponent<RectTransform>();
-        trRt.anchorMin = new Vector2(0.5f, 0);
-        trRt.anchorMax = new Vector2(1, 1);
-        trRt.offsetMin = Vector2.zero;
-        trRt.offsetMax = Vector2.zero;
+        totalRightTxt.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
 
         yield return TypewriterEffect(totalLeftTxt, "TOTAL STARS", 0.04f);
         yield return TypewriterEffect(totalRightTxt, $"{totalStars}/15", 0.04f);
@@ -1695,7 +1664,6 @@ public class UIManager : MonoBehaviour
         AddFullWidthButton(box.transform, "SECTOR COMPLETED!", 80, () =>
         {
             sectorSummaryPanel.SetActive(false);
-            sectorSummaryActive = false;
             GameManager.Instance.ExitToMenu();
         });
     }
@@ -1840,6 +1808,13 @@ public class UIManager : MonoBehaviour
         GameObject spacer = new GameObject("Spacer", typeof(RectTransform), typeof(LayoutElement));
         spacer.transform.SetParent(parent, false);
         spacer.GetComponent<LayoutElement>().preferredHeight = height;
+    }
+
+    void AddFlexSpacer(Transform parent)
+    {
+        GameObject spacer = new GameObject("FlexSpacer", typeof(RectTransform), typeof(LayoutElement));
+        spacer.transform.SetParent(parent, false);
+        spacer.GetComponent<LayoutElement>().flexibleHeight = 1;
     }
 
     void AddSmallButton(Transform parent, string label, bool isActive, System.Action onClick)
