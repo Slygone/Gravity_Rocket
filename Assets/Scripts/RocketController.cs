@@ -6,8 +6,8 @@ using System.Collections.Generic;
 public class RocketController : MonoBehaviour
 {
     // Constants matching original game
-    private const float G = 50f;
-    private const float LAUNCH_SPEED = 20f;
+    private float G = 50f;
+    private const float LAUNCH_SPEED = 9f;
     private const float ROCKET_RADIUS = 8f;
     private const float GAME_WIDTH = 400f;
     private const float GAME_HEIGHT = 800f;
@@ -23,11 +23,16 @@ public class RocketController : MonoBehaviour
 
     // Trail
     private List<TrailPoint> trail = new List<TrailPoint>();
-    private LineRenderer trailLineR;
-    private LineRenderer trailLineG;
-    private LineRenderer trailLineB;
+    private LineRenderer trailLine0;
+    private LineRenderer trailLine1;
+    private LineRenderer trailLine2;
     private const float ABERRATION_MULT = 12f;
     private const int MAX_TRAIL = 100;
+
+    // Configurable trail colors
+    private Color[] trailColors = new Color[] { Color.red, Color.green, Color.blue };
+    private float[] trailMults = new float[] { ABERRATION_MULT, 0f, -ABERRATION_MULT };
+    private Color shipHexColor = Color.white;
 
     // Aim line
     private LineRenderer aimLine;
@@ -74,6 +79,42 @@ public class RocketController : MonoBehaviour
         CreateRocketMesh();
         CreateTrailRenderers();
         CreateAimLine();
+    }
+
+    public void SetGravityConstant(float g) { G = g; }
+
+    public void SetTrailColors(string trailId, string shipId)
+    {
+        if (GameData.TRAILS.ContainsKey(trailId))
+        {
+            var trailDef = GameData.TRAILS[trailId];
+            if (GameData.SHIPS.ContainsKey(shipId))
+                shipHexColor = GameData.SHIPS[shipId].hex;
+
+            if (trailDef.isChroma)
+            {
+                trailColors = new Color[] { trailDef.hex[0], trailDef.hex[1], trailDef.hex[2] };
+                trailMults = new float[] { ABERRATION_MULT, 0f, -ABERRATION_MULT };
+            }
+            else
+            {
+                trailColors = new Color[] { shipHexColor, shipHexColor, shipHexColor };
+                trailMults = new float[] { 3f, 0f, -3f };
+            }
+
+            UpdateTrailRendererColors();
+
+            // Update rocket mesh color to match ship
+            if (meshRenderer != null && meshRenderer.material != null)
+                meshRenderer.material.color = shipHexColor;
+        }
+    }
+
+    void UpdateTrailRendererColors()
+    {
+        if (trailLine0 != null) { trailLine0.startColor = new Color(trailColors[0].r, trailColors[0].g, trailColors[0].b, 0f); trailLine0.endColor = trailColors[0]; }
+        if (trailLine1 != null) { trailLine1.startColor = new Color(trailColors[1].r, trailColors[1].g, trailColors[1].b, 0f); trailLine1.endColor = trailColors[1]; }
+        if (trailLine2 != null) { trailLine2.startColor = new Color(trailColors[2].r, trailColors[2].g, trailColors[2].b, 0f); trailLine2.endColor = trailColors[2]; }
     }
 
     void OnEnable()
@@ -123,6 +164,12 @@ public class RocketController : MonoBehaviour
             UpdatePhysics();
             CheckCollisions();
             SpawnExhaustParticle();
+
+            // Nebula hull damage
+            if (GameManager.Instance.IsNebulaLevel())
+            {
+                GameManager.Instance.DamageHull(0.5f * Time.deltaTime * 60f);
+            }
         }
         else if (state == GameManager.GameState.LEVEL_COMPLETE)
         {
@@ -141,30 +188,58 @@ public class RocketController : MonoBehaviour
     // ==================== INPUT ====================
     void HandleAimInput()
     {
-        var mouse = Mouse.current;
-        if (mouse == null) return;
+        // Block input if fleet panel is open
+        if (UIManager.Instance != null && UIManager.Instance.IsFleetPanelOpen) return;
 
-        if (mouse.leftButton.wasPressedThisFrame)
+        // Touch input (mobile)
+        if (UnityEngine.InputSystem.Touchscreen.current != null)
         {
-            Vector2 worldPos = GetMouseWorldPos();
-            // Only start drag if not clicking UI
-            if (UnityEngine.EventSystems.EventSystem.current == null || !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            var touch = UnityEngine.InputSystem.Touchscreen.current;
+            if (touch.primaryTouch.press.wasPressedThisFrame)
             {
-                isDragging = true;
-                UpdateAim(worldPos);
+                Vector2 worldPos = ScreenToWorld(touch.primaryTouch.position.ReadValue());
+                if (UnityEngine.EventSystems.EventSystem.current == null || !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+                {
+                    isDragging = true;
+                    UpdateAim(worldPos);
+                }
+            }
+            if (touch.primaryTouch.press.isPressed && isDragging)
+            {
+                UpdateAim(ScreenToWorld(touch.primaryTouch.position.ReadValue()));
+            }
+            if (touch.primaryTouch.press.wasReleasedThisFrame && isDragging)
+            {
+                isDragging = false;
+                LaunchRocket();
             }
         }
 
-        if (mouse.leftButton.isPressed && isDragging)
+        // Mouse input (editor/desktop)
+        var mouse = Mouse.current;
+        if (mouse != null)
         {
-            Vector2 worldPos = GetMouseWorldPos();
-            UpdateAim(worldPos);
-        }
+            if (mouse.leftButton.wasPressedThisFrame)
+            {
+                Vector2 worldPos = GetMouseWorldPos();
+                if (UnityEngine.EventSystems.EventSystem.current == null || !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+                {
+                    isDragging = true;
+                    UpdateAim(worldPos);
+                }
+            }
 
-        if (mouse.leftButton.wasReleasedThisFrame && isDragging)
-        {
-            isDragging = false;
-            LaunchRocket();
+            if (mouse.leftButton.isPressed && isDragging)
+            {
+                Vector2 worldPos = GetMouseWorldPos();
+                UpdateAim(worldPos);
+            }
+
+            if (mouse.leftButton.wasReleasedThisFrame && isDragging)
+            {
+                isDragging = false;
+                LaunchRocket();
+            }
         }
 
         // Draw aim line
@@ -179,16 +254,20 @@ public class RocketController : MonoBehaviour
         {
             aimLine.positionCount = 0;
         }
+    }
 
+    Vector2 ScreenToWorld(Vector2 screenPos)
+    {
+        Vector3 mousePos = new Vector3(screenPos.x, screenPos.y, Mathf.Abs(mainCam.transform.position.z));
+        Vector3 worldPos = mainCam.ScreenToWorldPoint(mousePos);
+        return new Vector2(worldPos.x, worldPos.y);
     }
 
     Vector2 GetMouseWorldPos()
     {
         var mouse = Mouse.current;
         if (mouse == null) return Vector2.zero;
-        Vector3 mousePos = new Vector3(mouse.position.ReadValue().x, mouse.position.ReadValue().y, Mathf.Abs(mainCam.transform.position.z));
-        Vector3 worldPos = mainCam.ScreenToWorldPoint(mousePos);
-        return new Vector2(worldPos.x, worldPos.y);
+        return ScreenToWorld(mouse.position.ReadValue());
     }
 
     void UpdateAim(Vector2 worldPos)
@@ -444,9 +523,9 @@ public class RocketController : MonoBehaviour
 
     void CreateTrailRenderers()
     {
-        trailLineR = CreateTrailLine("TrailR", Color.red);
-        trailLineG = CreateTrailLine("TrailG", Color.green);
-        trailLineB = CreateTrailLine("TrailB", Color.blue);
+        trailLine0 = CreateTrailLine("Trail0", trailColors[0]);
+        trailLine1 = CreateTrailLine("Trail1", trailColors[1]);
+        trailLine2 = CreateTrailLine("Trail2", trailColors[2]);
     }
 
     LineRenderer CreateTrailLine(string name, Color color)
@@ -467,18 +546,18 @@ public class RocketController : MonoBehaviour
 
     void ClearTrailRenderers()
     {
-        if (trailLineR != null) trailLineR.positionCount = 0;
-        if (trailLineG != null) trailLineG.positionCount = 0;
-        if (trailLineB != null) trailLineB.positionCount = 0;
+        if (trailLine0 != null) trailLine0.positionCount = 0;
+        if (trailLine1 != null) trailLine1.positionCount = 0;
+        if (trailLine2 != null) trailLine2.positionCount = 0;
     }
 
     void DrawTrail()
     {
         if (trail.Count < 2) return;
 
-        DrawAberratedTrail(trailLineR, ABERRATION_MULT);
-        DrawAberratedTrail(trailLineG, 0f);
-        DrawAberratedTrail(trailLineB, -ABERRATION_MULT);
+        DrawAberratedTrail(trailLine0, trailMults[0]);
+        DrawAberratedTrail(trailLine1, trailMults[1]);
+        DrawAberratedTrail(trailLine2, trailMults[2]);
     }
 
     void DrawAberratedTrail(LineRenderer lr, float mult)
@@ -532,7 +611,7 @@ public class RocketController : MonoBehaviour
 
         var state = GameManager.Instance != null ? GameManager.Instance.State : GameManager.GameState.MENU;
 
-        // Draw particles with additive-like colors (R/G/B channels)
+        // Draw particles with trail colors
         GL.PushMatrix();
         GL.LoadProjectionMatrix(mainCam.projectionMatrix);
         GL.modelview = mainCam.worldToCameraMatrix;
@@ -542,17 +621,11 @@ public class RocketController : MonoBehaviour
         {
             float alpha = Mathf.Max(0, p.life);
 
-            // Red channel
-            GL.Color(new Color(1, 0, 0, alpha));
-            DrawGLQuad(p.pos + p.accel * ABERRATION_MULT * p.life, 2f);
-
-            // Green channel
-            GL.Color(new Color(0, 1, 0, alpha));
-            DrawGLQuad(p.pos, 2f);
-
-            // Blue channel
-            GL.Color(new Color(0, 0, 1, alpha));
-            DrawGLQuad(p.pos - p.accel * ABERRATION_MULT * p.life, 2f);
+            for (int ch = 0; ch < 3; ch++)
+            {
+                GL.Color(new Color(trailColors[ch].r, trailColors[ch].g, trailColors[ch].b, alpha));
+                DrawGLQuad(p.pos + p.accel * trailMults[ch] * p.life, 2f);
+            }
         }
         GL.End();
 
@@ -589,7 +662,7 @@ public class RocketController : MonoBehaviour
             GL.End();
         }
 
-        // Draw flame
+        // Draw flame with trail colors (chromatic channels)
         if (state == GameManager.GameState.FLYING ||
             (state == GameManager.GameState.LEVEL_COMPLETE && warpTimer > 25f))
         {
@@ -597,14 +670,19 @@ public class RocketController : MonoBehaviour
                 25f + Random.value * 15f : 15f + Random.value * 5f;
             Vector2 rPos = transform.position;
             Vector2 back = new Vector2(-Mathf.Cos(angle), -Mathf.Sin(angle));
-            Vector2 flameStart = rPos + back * 4f;
-            Vector2 flameEnd = rPos + back * flameLen;
 
-            GL.Begin(GL.LINES);
-            GL.Color(Color.white);
-            GL.Vertex3(flameStart.x, flameStart.y, 0);
-            GL.Vertex3(flameEnd.x, flameEnd.y, 0);
-            GL.End();
+            for (int ch = 0; ch < 3; ch++)
+            {
+                Vector2 offset = acceleration * trailMults[ch];
+                Vector2 flameStart = rPos + offset + back * 4f;
+                Vector2 flameEnd = rPos + offset + back * flameLen;
+
+                GL.Begin(GL.LINES);
+                GL.Color(trailColors[ch]);
+                GL.Vertex3(flameStart.x, flameStart.y, 0);
+                GL.Vertex3(flameEnd.x, flameEnd.y, 0);
+                GL.End();
+            }
         }
 
         // Draw aim line crosshair at drag point
@@ -621,6 +699,33 @@ public class RocketController : MonoBehaviour
                 GL.Vertex3(dragCurrent.x + Mathf.Cos(a2) * 6f, dragCurrent.y + Mathf.Sin(a2) * 6f, 0);
             }
             GL.End();
+        }
+
+        // Draw nebula overlay
+        if (GameManager.Instance != null && GameManager.Instance.IsNebulaLevel())
+        {
+            float nebulaAlpha = 0.1f + Mathf.Sin(Time.time) * 0.05f;
+            GL.Begin(GL.QUADS);
+            GL.Color(new Color(0.39f, 0f, 0.59f, nebulaAlpha));
+            GL.Vertex3(0, 0, 0);
+            GL.Vertex3(GAME_WIDTH, 0, 0);
+            GL.Vertex3(GAME_WIDTH, GAME_HEIGHT, 0);
+            GL.Vertex3(0, GAME_HEIGHT, 0);
+            GL.End();
+
+            // Hull damage red overlay
+            float hull = GameManager.Instance.GetHullIntegrity();
+            if (hull < 100f)
+            {
+                float redAlpha = (100f - hull) / 100f * 0.5f;
+                GL.Begin(GL.QUADS);
+                GL.Color(new Color(1f, 0f, 0f, redAlpha));
+                GL.Vertex3(0, 0, 0);
+                GL.Vertex3(GAME_WIDTH, 0, 0);
+                GL.Vertex3(GAME_WIDTH, GAME_HEIGHT, 0);
+                GL.Vertex3(0, GAME_HEIGHT, 0);
+                GL.End();
+            }
         }
 
         GL.PopMatrix();

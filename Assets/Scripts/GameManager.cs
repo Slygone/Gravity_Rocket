@@ -1,7 +1,7 @@
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
+using System.Collections.Generic;
 
 public class GameManager : MonoBehaviour
 {
@@ -9,27 +9,28 @@ public class GameManager : MonoBehaviour
 
     public static GameManager Instance { get; private set; }
 
-    [Header("References (auto-created if null)")]
+    [Header("References (auto-created)")]
     public RocketController rocketController;
     public GravitySource[] gravitySources;
     public DockingGate dockingGate;
 
-    [Header("Level Data")]
-    public Vector2 rocketStartPos = new Vector2(200f, 60f);
-
     public GameState State { get; private set; } = GameState.MENU;
 
-    // UI References (created at runtime)
-    private Canvas canvas;
-    private GameObject menuPanel;
-    private GameObject gameOverPanel;
-    private GameObject levelCompletePanel;
-    private Text starsDisplayText;
-    private Text hudText;
-    private Text instructionText;
+    // Current session data
+    private int currentU, currentS, currentL;
+    private int currentGlobalIndex;
+    private int starsEarned;
+    private string activeShipId = "shipA";
+    private GameData.LevelData[] allLevels;
 
-    private int starsEarned = 0;
-    private int totalStars = 0;
+    // Nebula state
+    private float hullIntegrity = 100f;
+    private bool isNebulaLevel = false;
+
+    // Public accessors for UI
+    public int CurrentU => currentU;
+    public int CurrentS => currentS;
+    public int CurrentL => currentL;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void AutoBootstrap()
@@ -46,18 +47,24 @@ public class GameManager : MonoBehaviour
         if (Instance == null) Instance = this;
         else { Destroy(gameObject); return; }
 
+        allLevels = GameData.GenerateAllLevels();
+        PlayerState.Instance.Load();
         SetupScene();
     }
 
     void Start()
     {
-        CreateUI();
+        // Create UIManager
+        GameObject uiObj = new GameObject("UIManager");
+        uiObj.transform.SetParent(transform);
+        uiObj.AddComponent<UIManager>();
+        UIManager.Instance.Initialize();
+
         ShowMenu();
     }
 
     void SetupScene()
     {
-        // Configure camera
         Camera cam = Camera.main;
         if (cam != null)
         {
@@ -68,7 +75,6 @@ public class GameManager : MonoBehaviour
             cam.clearFlags = CameraClearFlags.SolidColor;
         }
 
-        // Ensure EventSystem exists
         if (FindFirstObjectByType<EventSystem>() == null)
         {
             GameObject esObj = new GameObject("EventSystem");
@@ -76,166 +82,220 @@ public class GameManager : MonoBehaviour
             esObj.AddComponent<InputSystemUIInputModule>();
         }
 
-        // Create StarField
         if (FindFirstObjectByType<StarField>() == null)
         {
             GameObject sfObj = new GameObject("StarField");
             sfObj.AddComponent<StarField>();
         }
 
-        // Create Rocket
         if (rocketController == null)
         {
             GameObject rocketObj = new GameObject("Rocket");
             rocketController = rocketObj.AddComponent<RocketController>();
         }
 
-        // Create Planets (Level 1 tutorial layout)
-        if (gravitySources == null || gravitySources.Length == 0)
-        {
-            gravitySources = new GravitySource[2];
+        // Planets and gate will be created per-level
+        gravitySources = new GravitySource[0];
 
-            GameObject p1 = new GameObject("Planet1");
-            p1.transform.position = new Vector3(80f, 400f, 0f);
-            GravitySource gs1 = p1.AddComponent<GravitySource>();
-            gs1.mass = 100f;
-            gs1.radius = 30f;
-            gravitySources[0] = gs1;
-
-            GameObject p2 = new GameObject("Planet2");
-            p2.transform.position = new Vector3(320f, 400f, 0f);
-            GravitySource gs2 = p2.AddComponent<GravitySource>();
-            gs2.mass = 100f;
-            gs2.radius = 30f;
-            gravitySources[1] = gs2;
-        }
-
-        // Create Docking Gate
         if (dockingGate == null)
         {
             GameObject gateObj = new GameObject("DockingGate");
-            gateObj.transform.position = new Vector3(200f, 745f, 0f);
             dockingGate = gateObj.AddComponent<DockingGate>();
-            dockingGate.gateWidth = 160f;
-            dockingGate.gateHeight = 30f;
         }
 
-        // Disable the 2D global light if present (it's a URP Light2D, find by name)
         GameObject globalLight = GameObject.Find("Global Light 2D");
         if (globalLight != null)
             globalLight.SetActive(false);
     }
 
-    public void SetState(GameState newState)
+    // ==================== PUBLIC API ====================
+    public string GetActiveShipId() => activeShipId;
+
+    public void SetActiveShipId(string id)
     {
-        State = newState;
+        activeShipId = id;
+        if (rocketController != null)
+            rocketController.SetGravityConstant(GameData.GetGravityForShip(id));
+    }
+
+    public float GetHullIntegrity() => hullIntegrity;
+    public bool IsNebulaLevel() => isNebulaLevel;
+
+    public void DamageHull(float amount)
+    {
+        if (activeShipId == "shipC") return; // Nebula Piercer immune
+        hullIntegrity -= amount;
+        if (hullIntegrity <= 0)
+        {
+            hullIntegrity = 0;
+            OnGameOver();
+        }
     }
 
     public void ShowMenu()
     {
         CancelInvoke();
         State = GameState.MENU;
-        HideAllPanels();
-        menuPanel.SetActive(true);
-        if (instructionText != null) instructionText.gameObject.SetActive(false);
-        if (rocketController != null) rocketController.gameObject.SetActive(false);
         SetWorldObjectsVisible(false);
+        if (rocketController != null) rocketController.gameObject.SetActive(false);
+        if (UIManager.Instance != null) UIManager.Instance.ShowMenuUI();
+        PlayerState.Instance.Save();
     }
 
-    public void StartGame()
+    public void LaunchLevel(int u, int s, int l, bool isMenuLaunch)
     {
-        totalStars = 0;
-        LoadLevel();
+        currentU = u;
+        currentS = s;
+        currentL = l;
+        currentGlobalIndex = GameData.ToGlobalIndex(u, s, l);
+
+        if (isMenuLaunch)
+            PlayerState.Instance.GlobalShields = PlayerState.Instance.MaxShields;
+
+        activeShipId = PlayerState.Instance.ActiveShips[0];
+
+        // Determine sector mechanics
+        string[] mechanics = GameData.GetSectorMechanics(s);
+        isNebulaLevel = System.Array.IndexOf(mechanics, "nebula") >= 0;
+        hullIntegrity = 100f;
+
+        SetupLevelGeometry();
+        StartLevel();
     }
 
-    public void LoadLevel()
+    void SetupLevelGeometry()
+    {
+        if (currentGlobalIndex >= allLevels.Length) return;
+        GameData.LevelData lvl = allLevels[currentGlobalIndex];
+
+        // Destroy old planets
+        if (gravitySources != null)
+        {
+            foreach (var gs in gravitySources)
+                if (gs != null) Destroy(gs.gameObject);
+        }
+
+        // Create new planets
+        gravitySources = new GravitySource[lvl.planets.Length];
+        for (int i = 0; i < lvl.planets.Length; i++)
+        {
+            var pd = lvl.planets[i];
+            GameObject pObj = new GameObject("Planet" + i);
+            pObj.transform.position = new Vector3(pd.x, pd.y, 0f);
+            GravitySource gs = pObj.AddComponent<GravitySource>();
+            gs.mass = pd.mass;
+            gs.radius = pd.radius;
+            gravitySources[i] = gs;
+        }
+
+        // Setup docking gate
+        if (dockingGate != null)
+        {
+            float gateCenterX = lvl.goalX + GameData.GoalWidth * 0.5f;
+            float gateCenterY = lvl.goalY + GameData.GOAL_HEIGHT * 0.5f;
+            dockingGate.transform.position = new Vector3(gateCenterX, gateCenterY, 0f);
+            dockingGate.gateWidth = GameData.GoalWidth;
+            dockingGate.gateHeight = GameData.GOAL_HEIGHT;
+        }
+    }
+
+    void StartLevel()
     {
         CancelInvoke();
-        HideAllPanels();
         State = GameState.AIMING;
         starsEarned = 0;
 
         SetWorldObjectsVisible(true);
         rocketController.gameObject.SetActive(true);
-        rocketController.ResetRocket(rocketStartPos);
 
-        if (instructionText != null)
+        GameData.LevelData lvl = allLevels[currentGlobalIndex];
+        rocketController.ResetRocket(new Vector2(lvl.startX, lvl.startY));
+        rocketController.SetGravityConstant(GameData.GetGravityForShip(activeShipId));
+        rocketController.SetTrailColors(PlayerState.Instance.ActiveTrail, activeShipId);
+
+        if (UIManager.Instance != null)
         {
-            instructionText.gameObject.SetActive(true);
-            instructionText.text = "DRAG TO PLOT TRAJECTORY";
+            UIManager.Instance.ShowGameUI(currentU, currentS, currentL, activeShipId);
         }
-
-        UpdateHUD();
     }
 
     public void OnRocketLaunched()
     {
         State = GameState.FLYING;
-        if (instructionText != null) instructionText.gameObject.SetActive(false);
+        if (UIManager.Instance != null) UIManager.Instance.HideHudMessage();
     }
 
     public void OnGameOver()
     {
+        if (State == GameState.GAMEOVER) return;
         State = GameState.GAMEOVER;
-        if (instructionText != null) instructionText.gameObject.SetActive(false);
 
-        // Hide rocket mesh after explosion (particles still update)
+        var ps = PlayerState.Instance;
+        ps.GlobalShields = Mathf.Max(0, ps.GlobalShields - 1);
+
         if (rocketController != null)
         {
             MeshRenderer mr = rocketController.GetComponent<MeshRenderer>();
             if (mr != null) mr.enabled = false;
         }
 
-        Invoke(nameof(ShowGameOverPanel), 0.8f);
+        Invoke(nameof(ShowGameOverUI), 0.8f);
+    }
+
+    void ShowGameOverUI()
+    {
+        SetWorldObjectsVisible(false);
+        if (UIManager.Instance != null)
+            UIManager.Instance.ShowGameOver(PlayerState.Instance.GlobalShields > 0);
     }
 
     public void OnLevelComplete(float hitRatio)
     {
         State = GameState.LEVEL_COMPLETE;
-        if (instructionText != null) instructionText.gameObject.SetActive(false);
 
         if (hitRatio > 0.4f && hitRatio < 0.6f) starsEarned = 3;
         else if (hitRatio > 0.2f && hitRatio < 0.8f) starsEarned = 2;
         else starsEarned = 1;
 
-        totalStars += starsEarned;
+        PlayerState.Instance.SetLevelScore(currentU, currentS, currentL, starsEarned);
 
-        Invoke(nameof(ShowLevelCompletePanel), 1.5f);
+        // Regain a shield on success
+        var ps = PlayerState.Instance;
+        ps.GlobalShields = Mathf.Min(ps.MaxShields, ps.GlobalShields + 1);
+
+        Invoke(nameof(ShowSuccessUI), 1.5f);
     }
 
-    void ShowGameOverPanel()
+    void ShowSuccessUI()
     {
-        HideAllPanels();
         SetWorldObjectsVisible(false);
-        gameOverPanel.SetActive(true);
+        if (UIManager.Instance != null)
+            UIManager.Instance.ShowSuccess(starsEarned);
     }
 
-    void ShowLevelCompletePanel()
+    public void OnContinueAfterSuccess()
     {
-        HideAllPanels();
-        SetWorldObjectsVisible(false);
-        levelCompletePanel.SetActive(true);
-
-        string starText = "";
-        for (int i = 0; i < 3; i++)
-            starText += (i < starsEarned) ? "\u2605" : "\u2606";
-        if (starsDisplayText != null)
-            starsDisplayText.text = starText;
-
-        UpdateHUD();
+        if (currentL < 5)
+        {
+            // Auto-advance to next level in sector
+            LaunchLevel(currentU, currentS, currentL + 1, false);
+        }
+        else
+        {
+            // Sector complete — show summary
+            if (UIManager.Instance != null)
+                UIManager.Instance.ShowSectorSummary(currentU, currentS);
+        }
     }
 
-    void HideAllPanels()
+    public void RetryLevel()
     {
-        if (menuPanel != null) menuPanel.SetActive(false);
-        if (gameOverPanel != null) gameOverPanel.SetActive(false);
-        if (levelCompletePanel != null) levelCompletePanel.SetActive(false);
+        StartLevel();
     }
 
-    void UpdateHUD()
+    public void ExitToMenu()
     {
-        if (hudText != null)
-            hudText.text = "U1 - SEC 1 - LVL 1\n\u2605 " + totalStars;
+        ShowMenu();
     }
 
     void SetWorldObjectsVisible(bool visible)
@@ -246,135 +306,5 @@ public class GameManager : MonoBehaviour
                 if (gs != null) gs.gameObject.SetActive(visible);
         }
         if (dockingGate != null) dockingGate.gameObject.SetActive(visible);
-    }
-
-    // ==================== UI CREATION ====================
-    void CreateUI()
-    {
-        // Canvas — use 1080x1920 reference for crisp Full HD text
-        GameObject canvasObj = new GameObject("UICanvas");
-        canvas = canvasObj.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 100;
-        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1080, 1920);
-        scaler.matchWidthOrHeight = 0.5f;
-        canvasObj.AddComponent<GraphicRaycaster>();
-
-        // HUD
-        hudText = CreateText(canvasObj.transform, "HUD", "U1 - SEC 1 - LVL 1\n\u2605 0",
-            TextAnchor.UpperLeft, new Vector2(50, -50), new Vector2(800, 160), 42);
-        hudText.rectTransform.anchorMin = new Vector2(0, 1);
-        hudText.rectTransform.anchorMax = new Vector2(0, 1);
-        hudText.rectTransform.pivot = new Vector2(0, 1);
-
-        // Instruction
-        instructionText = CreateText(canvasObj.transform, "Instruction", "DRAG TO PLOT TRAJECTORY",
-            TextAnchor.MiddleCenter, new Vector2(0, -800), new Vector2(1000, 100), 36);
-        instructionText.color = new Color(1, 1, 1, 0.5f);
-        instructionText.gameObject.SetActive(false);
-
-        // Menu Panel
-        menuPanel = CreatePanel(canvasObj.transform, "MenuPanel");
-        CreateText(menuPanel.transform, "Title", "GRAVITY\nROCKET",
-            TextAnchor.MiddleCenter, new Vector2(0, 160), new Vector2(750, 260), 84);
-        CreateText(menuPanel.transform, "Subtitle", "Monochrome Edition\nHit dead center for 3 stars.",
-            TextAnchor.MiddleCenter, new Vector2(0, -20), new Vector2(750, 130), 36).color = new Color(0.8f, 0.8f, 0.8f);
-        CreateButton(menuPanel.transform, "StartBtn", "INITIATE", new Vector2(0, -190), () => StartGame());
-
-        // Game Over Panel
-        gameOverPanel = CreatePanel(canvasObj.transform, "GameOverPanel");
-        CreateText(gameOverPanel.transform, "GOTitle", "SIGNAL LOST",
-            TextAnchor.MiddleCenter, new Vector2(0, 110), new Vector2(750, 110), 58);
-        CreateText(gameOverPanel.transform, "GODesc", "Trajectory compromised.",
-            TextAnchor.MiddleCenter, new Vector2(0, 10), new Vector2(750, 80), 36).color = new Color(0.8f, 0.8f, 0.8f);
-        CreateButton(gameOverPanel.transform, "RetryBtn", "RECALCULATE", new Vector2(0, -130), () => LoadLevel());
-        gameOverPanel.SetActive(false);
-
-        // Level Complete Panel
-        levelCompletePanel = CreatePanel(canvasObj.transform, "LevelCompletePanel");
-        CreateText(levelCompletePanel.transform, "LCTitle", "DOCKING SUCCESSFUL",
-            TextAnchor.MiddleCenter, new Vector2(0, 160), new Vector2(750, 110), 58);
-        starsDisplayText = CreateText(levelCompletePanel.transform, "Stars", "\u2606\u2606\u2606",
-            TextAnchor.MiddleCenter, new Vector2(0, 30), new Vector2(750, 150), 108);
-        CreateButton(levelCompletePanel.transform, "ReplayBtn", "REPLAY LEVEL", new Vector2(0, -140), () => LoadLevel());
-        levelCompletePanel.SetActive(false);
-    }
-
-    GameObject CreatePanel(Transform parent, string name)
-    {
-        GameObject panel = new GameObject(name, typeof(RectTransform), typeof(Image));
-        panel.transform.SetParent(parent, false);
-        RectTransform rt = panel.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.sizeDelta = new Vector2(800, 650);
-        rt.anchoredPosition = Vector2.zero;
-
-        Image img = panel.GetComponent<Image>();
-        img.color = new Color(0, 0, 0, 0.9f);
-
-        // Border via Outline
-        Outline outline = panel.AddComponent<Outline>();
-        outline.effectColor = Color.white;
-        outline.effectDistance = new Vector2(2, 2);
-
-        return panel;
-    }
-
-    Text CreateText(Transform parent, string name, string content, TextAnchor alignment, Vector2 pos, Vector2 size, int fontSize)
-    {
-        GameObject obj = new GameObject(name, typeof(RectTransform));
-        obj.transform.SetParent(parent, false);
-        RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.sizeDelta = size;
-        rt.anchoredPosition = pos;
-
-        Text txt = obj.AddComponent<Text>();
-        txt.text = content;
-        txt.font = Font.CreateDynamicFontFromOSFont("Courier New", fontSize * 2);
-        txt.fontSize = fontSize;
-        txt.alignment = alignment;
-        txt.color = Color.white;
-        txt.horizontalOverflow = HorizontalWrapMode.Overflow;
-
-        return txt;
-    }
-
-    void CreateButton(Transform parent, string name, string label, Vector2 pos, UnityEngine.Events.UnityAction onClick)
-    {
-        GameObject btnObj = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
-        btnObj.transform.SetParent(parent, false);
-        RectTransform rt = btnObj.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.sizeDelta = new Vector2(580, 120);
-        rt.anchoredPosition = pos;
-
-        Image img = btnObj.GetComponent<Image>();
-        img.color = new Color(0, 0, 0, 0.8f);
-
-        Outline outline = btnObj.AddComponent<Outline>();
-        outline.effectColor = Color.white;
-        outline.effectDistance = new Vector2(2, 2);
-
-        Button btn = btnObj.GetComponent<Button>();
-        btn.onClick.AddListener(onClick);
-
-        ColorBlock cb = btn.colors;
-        cb.normalColor = new Color(0, 0, 0, 0.8f);
-        cb.highlightedColor = new Color(1, 1, 1, 1f);
-        cb.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
-        btn.colors = cb;
-
-        Text txt = CreateText(btnObj.transform, "Label", label,
-            TextAnchor.MiddleCenter, Vector2.zero, new Vector2(540, 100), 42);
-        txt.raycastTarget = false;
     }
 }
