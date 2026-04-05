@@ -227,7 +227,7 @@ public class UIManager : MonoBehaviour
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(1, 1);
         rt.pivot = new Vector2(0.5f, 1);
-        rt.sizeDelta = new Vector2(0, 160);
+        rt.sizeDelta = new Vector2(0, 120);
         rt.anchoredPosition = Vector2.zero;
 
         Image bg = topNavPanel.GetComponent<Image>();
@@ -235,7 +235,7 @@ public class UIManager : MonoBehaviour
 
         Outline outline = topNavPanel.AddComponent<Outline>();
         outline.effectColor = Color.white;
-        outline.effectDistance = new Vector2(0, -2);
+        outline.effectDistance = new Vector2(0, -1);
     }
 
     void RefreshTopNav()
@@ -249,8 +249,8 @@ public class UIManager : MonoBehaviour
         RectTransform lgRt = leftGroup.GetComponent<RectTransform>();
         lgRt.anchorMin = new Vector2(0, 0);
         lgRt.anchorMax = new Vector2(0.5f, 1);
-        lgRt.offsetMin = new Vector2(30, 10);
-        lgRt.offsetMax = new Vector2(0, -10);
+        lgRt.offsetMin = new Vector2(34, 8);
+        lgRt.offsetMax = new Vector2(0, -8);
 
         AddNavLabel(leftGroup.transform, "\u2605 " + ps.TotalStars, Color.white);
         AddNavLabel(leftGroup.transform, "LVL " + ps.AccountLevel, Color.white);
@@ -261,8 +261,8 @@ public class UIManager : MonoBehaviour
         RectTransform rgRt = rightGroup.GetComponent<RectTransform>();
         rgRt.anchorMin = new Vector2(0.5f, 0);
         rgRt.anchorMax = new Vector2(1, 1);
-        rgRt.offsetMin = new Vector2(0, 15);
-        rgRt.offsetMax = new Vector2(-30, -15);
+        rgRt.offsetMin = new Vector2(0, 10);
+        rgRt.offsetMax = new Vector2(-20, -10);
 
         AddNavButton(rightGroup.transform, "MAP", View.Map);
         AddNavButton(rightGroup.transform, "PASS" + (ps.HasUnclaimedRewards ? " \u25CF" : ""), View.BattlePass);
@@ -272,11 +272,11 @@ public class UIManager : MonoBehaviour
 
     void AddNavLabel(Transform parent, string text, Color color)
     {
-        Text t = CreateTextElement(parent, "lbl", text, 36, color, TextAnchor.MiddleLeft);
+        Text t = CreateTextElement(parent, "lbl", text, 38, color, TextAnchor.MiddleLeft);
         t.fontStyle = FontStyle.Bold;
         LayoutElement le = t.gameObject.AddComponent<LayoutElement>();
-        le.minWidth = 120;
-        le.preferredWidth = 180;
+        le.minWidth = 100;
+        le.preferredWidth = 160;
     }
 
     void AddNavButton(Transform parent, string label, View targetView)
@@ -291,14 +291,14 @@ public class UIManager : MonoBehaviour
 
         Outline ol = btnObj.AddComponent<Outline>();
         ol.effectColor = Color.white;
-        ol.effectDistance = new Vector2(2, 2);
+        ol.effectDistance = new Vector2(1, -1);
 
         LayoutElement le = btnObj.AddComponent<LayoutElement>();
-        le.minWidth = 140;
-        le.preferredWidth = 160;
-        le.minHeight = 80;
+        le.minWidth = 100;
+        le.preferredWidth = 120;
+        le.minHeight = 55;
 
-        Text txt = CreateTextElement(btnObj.transform, "Label", label, 24, isActive ? Color.black : Color.white, TextAnchor.MiddleCenter);
+        Text txt = CreateTextElement(btnObj.transform, "Label", label, 22, isActive ? Color.black : Color.white, TextAnchor.MiddleCenter);
         txt.fontStyle = FontStyle.Bold;
         txt.raycastTarget = false;
 
@@ -320,7 +320,7 @@ public class UIManager : MonoBehaviour
         rt.anchorMin = new Vector2(0, 0);
         rt.anchorMax = new Vector2(1, 1);
         rt.offsetMin = new Vector2(0, 0);
-        rt.offsetMax = new Vector2(0, -160); // Below topnav
+        rt.offsetMax = new Vector2(0, -120); // Below topnav
 
         Image bg = contentPanel.GetComponent<Image>();
         bg.color = new Color(0, 0, 0, 0.95f);
@@ -357,12 +357,12 @@ public class UIManager : MonoBehaviour
         cRt.anchorMin = new Vector2(0, 1);
         cRt.anchorMax = new Vector2(1, 1);
         cRt.pivot = new Vector2(0.5f, 1);
-        cRt.offsetMin = new Vector2(40, 0);
-        cRt.offsetMax = new Vector2(-40, 0);
+        cRt.offsetMin = new Vector2(60, 0);
+        cRt.offsetMax = new Vector2(-60, 0);
 
         VerticalLayoutGroup vlg = content.GetComponent<VerticalLayoutGroup>();
-        vlg.spacing = 20;
-        vlg.padding = new RectOffset(0, 0, 30, 100);
+        vlg.spacing = 24;
+        vlg.padding = new RectOffset(0, 0, 34, 80);
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
         vlg.childControlWidth = true;
@@ -397,13 +397,13 @@ public class UIManager : MonoBehaviour
 
         // Header
         GameObject header = CreateHLayout(parent, "Header", Vector2.zero, TextAnchor.MiddleLeft);
-        SetHeight(header, 80);
-        Text title = CreateTextElement(header.transform, "Title", "UNIVERSE " + ps.CurrentUniverse, 60, Color.white, TextAnchor.MiddleLeft);
+        SetHeight(header, 70);
+        Text title = CreateTextElement(header.transform, "Title", "UNIVERSE " + ps.CurrentUniverse, 64, Color.white, TextAnchor.MiddleLeft);
         title.fontStyle = FontStyle.Bold;
 
         // Universe buttons
         GameObject uBtns = CreateHLayout(parent, "UBtns", Vector2.zero, TextAnchor.MiddleLeft);
-        SetHeight(uBtns, 80);
+        SetHeight(uBtns, 55);
         AddSmallButton(uBtns.transform, "U1", ps.CurrentUniverse == 1, () => { ps.CurrentUniverse = 1; RefreshTopNav(); RefreshContent(); });
         AddSmallButton(uBtns.transform, "U2" + (!ps.CanEnterUniverse2 ? " \u26BF" : ""), ps.CurrentUniverse == 2, () =>
         {
@@ -426,8 +426,8 @@ public class UIManager : MonoBehaviour
         for (int row = 0; row < 5; row++)
         {
             GameObject rowObj = CreateHLayout(parent, "Row" + row, Vector2.zero, TextAnchor.MiddleLeft);
-            SetHeight(rowObj, 340);
-            rowObj.GetComponent<HorizontalLayoutGroup>().spacing = 20;
+            SetHeight(rowObj, 280);
+            rowObj.GetComponent<HorizontalLayoutGroup>().spacing = 24;
 
             for (int col = 0; col < 2; col++)
             {
@@ -453,11 +453,11 @@ public class UIManager : MonoBehaviour
 
         Outline ol = card.AddComponent<Outline>();
         ol.effectColor = isUnlocked ? Color.white : new Color(1, 1, 1, 0.3f);
-        ol.effectDistance = new Vector2(2, 2);
+        ol.effectDistance = new Vector2(1, -1);
 
         LayoutElement le = card.GetComponent<LayoutElement>();
         le.flexibleWidth = 1;
-        le.preferredHeight = 320;
+        le.preferredHeight = 260;
 
         if (!isUnlocked)
         {
@@ -467,20 +467,20 @@ public class UIManager : MonoBehaviour
 
         // Content
         VerticalLayoutGroup vlg = card.AddComponent<VerticalLayoutGroup>();
-        vlg.padding = new RectOffset(20, 20, 15, 15);
-        vlg.spacing = 8;
+        vlg.padding = new RectOffset(24, 24, 16, 16);
+        vlg.spacing = 6;
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
 
         // Title row
-        Text titleTxt = CreateTextElement(card.transform, "Title", "SECTOR " + sectorNum, 36, Color.white, TextAnchor.UpperLeft);
+        Text titleTxt = CreateTextElement(card.transform, "Title", "SECTOR " + sectorNum, 38, Color.white, TextAnchor.UpperLeft);
         titleTxt.fontStyle = FontStyle.Bold;
         SetHeight(titleTxt.gameObject, 44);
 
         // Mechanics tags
         GameObject tagsRow = CreateHLayout(card.transform, "Tags", Vector2.zero, TextAnchor.MiddleLeft);
-        SetHeight(tagsRow, 40);
-        tagsRow.GetComponent<HorizontalLayoutGroup>().spacing = 8;
+        SetHeight(tagsRow, 32);
+        tagsRow.GetComponent<HorizontalLayoutGroup>().spacing = 6;
 
         foreach (string mechId in mechIds)
         {
@@ -491,11 +491,11 @@ public class UIManager : MonoBehaviour
             tag.GetComponent<Image>().color = Color.black;
             Outline tagOl = tag.AddComponent<Outline>();
             tagOl.effectColor = isUnlocked ? mech.color : new Color(1, 1, 1, 0.3f);
-            tagOl.effectDistance = new Vector2(1, 1);
+            tagOl.effectDistance = new Vector2(1, -1);
             LayoutElement tagLe = tag.AddComponent<LayoutElement>();
-            tagLe.preferredWidth = 180;
-            tagLe.preferredHeight = 36;
-            Text tagTxt = CreateTextElement(tag.transform, "Lbl", mech.name.ToUpper(), 18, isUnlocked ? mech.color : new Color(1, 1, 1, 0.3f), TextAnchor.MiddleCenter);
+            tagLe.preferredWidth = 160;
+            tagLe.preferredHeight = 28;
+            Text tagTxt = CreateTextElement(tag.transform, "Lbl", mech.name.ToUpper(), 20, isUnlocked ? mech.color : new Color(1, 1, 1, 0.3f), TextAnchor.MiddleCenter);
             tagTxt.fontStyle = FontStyle.Bold;
         }
 
@@ -505,13 +505,13 @@ public class UIManager : MonoBehaviour
         spacer.GetComponent<LayoutElement>().flexibleHeight = 1;
 
         // Stats
-        Text lvlTxt = CreateTextElement(card.transform, "Lvl", $"LVL: {levelsCleared}/5", 24, Color.white, TextAnchor.LowerLeft);
+        Text lvlTxt = CreateTextElement(card.transform, "Lvl", $"LVL: {levelsCleared}/5", 26, Color.white, TextAnchor.LowerLeft);
         lvlTxt.fontStyle = FontStyle.Bold;
-        SetHeight(lvlTxt.gameObject, 30);
+        SetHeight(lvlTxt.gameObject, 28);
 
-        Text starsTxt = CreateTextElement(card.transform, "Stars", $"{sectorStars}/15 \u2605", 28, Color.white, TextAnchor.LowerLeft);
+        Text starsTxt = CreateTextElement(card.transform, "Stars", $"{sectorStars}/15 \u2605", 30, Color.white, TextAnchor.LowerLeft);
         starsTxt.fontStyle = FontStyle.Bold;
-        SetHeight(starsTxt.gameObject, 36);
+        SetHeight(starsTxt.gameObject, 32);
 
         // Button
         Button btn = card.GetComponent<Button>();
@@ -549,7 +549,7 @@ public class UIManager : MonoBehaviour
         });
 
         // Header
-        Text title = CreateTextElement(parent, "Title", $"UNIVERSE {u} - SECTOR {s}", 52, Color.white, TextAnchor.MiddleLeft);
+        Text title = CreateTextElement(parent, "Title", $"UNIVERSE {u} - SECTOR {s}", 64, Color.white, TextAnchor.MiddleLeft);
         title.fontStyle = FontStyle.Bold;
         SetHeight(title.gameObject, 70);
 
@@ -572,14 +572,14 @@ public class UIManager : MonoBehaviour
             var mech = GameData.SECTOR_MECHANICS[mechId];
             bool isMet = string.IsNullOrEmpty(mech.reqShip) || ps.ActiveShips.Contains(mech.reqShip);
 
-            GameObject hazard = CreateLayoutItem(parent, "Hazard_" + mechId, 120);
+            GameObject hazard = CreateLayoutItem(parent, "Hazard_" + mechId, 100);
             AddOutline(hazard, isMet ? mech.color : Color.red);
 
-            Text hazardTitle = CreateTextElement(hazard.transform, "HTitle", "\u26A0 HAZARD: " + mech.name.ToUpper(), 28, isMet ? mech.color : Color.red, TextAnchor.UpperLeft);
+            Text hazardTitle = CreateTextElement(hazard.transform, "HTitle", "\u26A0 HAZARD: " + mech.name.ToUpper(), 30, isMet ? mech.color : Color.red, TextAnchor.UpperLeft);
             hazardTitle.fontStyle = FontStyle.Bold;
             PositionText(hazardTitle, new Vector2(20, -10), new Vector2(-40, -40));
 
-            Text hazardDesc = CreateTextElement(hazard.transform, "HDesc", mech.warning, 22, isMet ? mech.color : Color.red, TextAnchor.MiddleLeft);
+            Text hazardDesc = CreateTextElement(hazard.transform, "HDesc", mech.warning, 26, isMet ? mech.color : Color.red, TextAnchor.MiddleLeft);
             PositionText(hazardDesc, new Vector2(20, -50), new Vector2(-40, -30));
 
             if (!isMet)
@@ -599,7 +599,7 @@ public class UIManager : MonoBehaviour
             bool canPlay = (l == 1) || isCleared;
             bool requiresAd = (l != 1) && isCleared;
 
-            GameObject levelRow = CreateLayoutItem(parent, "Level" + l, 120);
+            GameObject levelRow = CreateLayoutItem(parent, "Level" + l, 100);
             AddOutline(levelRow, canPlay ? Color.white : new Color(1, 1, 1, 0.3f));
 
             if (!canPlay)
@@ -614,20 +614,20 @@ public class UIManager : MonoBehaviour
             numBox.GetComponent<Image>().color = Color.black;
             Outline numOl = numBox.AddComponent<Outline>();
             numOl.effectColor = canPlay ? Color.white : new Color(1, 1, 1, 0.3f);
-            numOl.effectDistance = new Vector2(1, 1);
+            numOl.effectDistance = new Vector2(1, -1);
             RectTransform numRt = numBox.GetComponent<RectTransform>();
             numRt.anchorMin = new Vector2(0, 0.5f);
             numRt.anchorMax = new Vector2(0, 0.5f);
             numRt.pivot = new Vector2(0, 0.5f);
-            numRt.sizeDelta = new Vector2(80, 80);
+            numRt.sizeDelta = new Vector2(70, 70);
             numRt.anchoredPosition = new Vector2(15, 0);
-            Text numTxt = CreateTextElement(numBox.transform, "N", l.ToString(), 36, Color.white, TextAnchor.MiddleCenter);
+            Text numTxt = CreateTextElement(numBox.transform, "N", l.ToString(), 30, Color.white, TextAnchor.MiddleCenter);
             numTxt.fontStyle = FontStyle.Bold;
             FillRect(numTxt);
 
             // Level info
             string levelLabel = "LEVEL " + l + (isCleared ? "  [CLEARED]" : "");
-            Text lvlTitle = CreateTextElement(levelRow.transform, "LTitle", levelLabel, 28, Color.white, TextAnchor.MiddleLeft);
+            Text lvlTitle = CreateTextElement(levelRow.transform, "LTitle", levelLabel, 30, Color.white, TextAnchor.MiddleLeft);
             lvlTitle.fontStyle = FontStyle.Bold;
             RectTransform ltRt = lvlTitle.GetComponent<RectTransform>();
             ltRt.anchorMin = new Vector2(0, 0.5f);
@@ -638,7 +638,7 @@ public class UIManager : MonoBehaviour
             // Stars display
             string starStr = "";
             for (int si = 1; si <= 3; si++) starStr += (si <= stars) ? "\u2605" : "\u2606";
-            Text starTxt = CreateTextElement(levelRow.transform, "Stars", starStr, 32, Color.white, TextAnchor.MiddleLeft);
+            Text starTxt = CreateTextElement(levelRow.transform, "Stars", starStr, 28, Color.white, TextAnchor.MiddleLeft);
             RectTransform stRt = starTxt.GetComponent<RectTransform>();
             stRt.anchorMin = new Vector2(0, 0);
             stRt.anchorMax = new Vector2(0.6f, 0.5f);
@@ -654,15 +654,15 @@ public class UIManager : MonoBehaviour
                 pbImg.color = requiresAd ? Color.black : Color.white;
                 Outline pbOl = playBtn.AddComponent<Outline>();
                 pbOl.effectColor = Color.white;
-                pbOl.effectDistance = new Vector2(2, 2);
+                pbOl.effectDistance = new Vector2(1, -1);
                 RectTransform pbRt = playBtn.GetComponent<RectTransform>();
                 pbRt.anchorMin = new Vector2(1, 0.5f);
                 pbRt.anchorMax = new Vector2(1, 0.5f);
                 pbRt.pivot = new Vector2(1, 0.5f);
-                pbRt.sizeDelta = new Vector2(280, 80);
+                pbRt.sizeDelta = new Vector2(240, 60);
                 pbRt.anchoredPosition = new Vector2(-15, 0);
 
-                Text pbTxt = CreateTextElement(playBtn.transform, "Lbl", "\u25B6 PRE-FLIGHT", 22,
+                Text pbTxt = CreateTextElement(playBtn.transform, "Lbl", "\u25B6 PRE-FLIGHT", 20,
                     requiresAd ? Color.white : Color.black, TextAnchor.MiddleCenter);
                 pbTxt.fontStyle = FontStyle.Bold;
                 pbTxt.raycastTarget = false;
@@ -694,14 +694,14 @@ public class UIManager : MonoBehaviour
         var ps = PlayerState.Instance;
 
         // Title
-        Text title = CreateTextElement(parent, "Title", "HANGAR TERMINAL", 60, Color.white, TextAnchor.MiddleLeft);
+        Text title = CreateTextElement(parent, "Title", "HANGAR TERMINAL", 64, Color.white, TextAnchor.MiddleLeft);
         title.fontStyle = FontStyle.Bold;
         SetHeight(title.gameObject, 80);
 
         AddSeparator(parent);
 
         // Ships section
-        Text shipHeader = CreateTextElement(parent, "ShipHeader", "FLEET / SHIPS (MULTI-SELECT)", 36, new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
+        Text shipHeader = CreateTextElement(parent, "ShipHeader", "FLEET / SHIPS (MULTI-SELECT)", 42, new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
         shipHeader.fontStyle = FontStyle.Bold;
         SetHeight(shipHeader.gameObject, 50);
 
@@ -711,7 +711,7 @@ public class UIManager : MonoBehaviour
             bool isUnlocked = ps.UnlockedShips.Contains(ship.id);
             bool isEquipped = ps.ActiveShips.Contains(ship.id);
 
-            GameObject card = CreateLayoutItem(parent, "Ship_" + ship.id, 200);
+            GameObject card = CreateLayoutItem(parent, "Ship_" + ship.id, 220);
             Image cardImg = card.GetComponent<Image>();
             cardImg.color = isEquipped ? Color.white : Color.black;
             AddOutline(card, isEquipped ? Color.white : (isUnlocked ? new Color(1, 1, 1, 0.5f) : new Color(1, 1, 1, 0.2f)));
@@ -724,28 +724,29 @@ public class UIManager : MonoBehaviour
 
             Color textColor = isEquipped ? Color.black : Color.white;
 
-            Text nameText = CreateTextElement(card.transform, "Name", ship.name.ToUpper(), 36, textColor, TextAnchor.UpperLeft);
+            Text nameText = CreateTextElement(card.transform, "Name", ship.name.ToUpper(), 38, textColor, TextAnchor.UpperLeft);
             nameText.fontStyle = FontStyle.Bold;
-            PositionText(nameText, new Vector2(20, -15), new Vector2(-20, -40));
+            PositionText(nameText, new Vector2(24, -16), new Vector2(-24, -42));
 
-            Text perkText = CreateTextElement(card.transform, "Perk", ship.perk, 24, isEquipped ? new Color(0, 0, 0, 0.7f) : new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
-            PositionText(perkText, new Vector2(20, -60), new Vector2(-20, -40));
+            Text perkText = CreateTextElement(card.transform, "Perk", ship.perk, 26, isEquipped ? new Color(0, 0, 0, 0.7f) : new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
+            PositionText(perkText, new Vector2(24, -60), new Vector2(-24, -35));
 
             if (isEquipped)
             {
-                Text activeTxt = CreateTextElement(card.transform, "Active", "ACTIVE", 20, Color.white, TextAnchor.UpperRight);
-                activeTxt.fontStyle = FontStyle.Bold;
-                RectTransform atRt = activeTxt.GetComponent<RectTransform>();
+                GameObject badge = new GameObject("ActiveBadge", typeof(RectTransform), typeof(Image));
+                badge.transform.SetParent(card.transform, false);
+                badge.GetComponent<Image>().color = Color.black;
+                AddOutline(badge);
+                RectTransform atRt = badge.GetComponent<RectTransform>();
                 atRt.anchorMin = new Vector2(1, 1);
                 atRt.anchorMax = new Vector2(1, 1);
                 atRt.pivot = new Vector2(1, 1);
                 atRt.sizeDelta = new Vector2(120, 36);
                 atRt.anchoredPosition = new Vector2(-15, -15);
-
-                // Add bg for "ACTIVE" label
-                Image atBg = activeTxt.gameObject.AddComponent<Image>();
-                atBg.color = Color.black;
-                atBg.raycastTarget = false;
+                Text activeTxt = CreateTextElement(badge.transform, "Lbl", "ACTIVE", 20, Color.white, TextAnchor.MiddleCenter);
+                activeTxt.fontStyle = FontStyle.Bold;
+                activeTxt.raycastTarget = false;
+                FillRect(activeTxt);
             }
 
             // Action button
@@ -756,7 +757,7 @@ public class UIManager : MonoBehaviour
             abImg.color = isEquipped ? Color.black : Color.black;
             Outline abOl = actionBtn.AddComponent<Outline>();
             abOl.effectColor = isEquipped ? (isEquipped ? Color.black : Color.white) : new Color(1, 1, 1, 0.2f);
-            abOl.effectDistance = new Vector2(1, 1);
+            abOl.effectDistance = new Vector2(1, -1);
             RectTransform abRt = actionBtn.GetComponent<RectTransform>();
             abRt.anchorMin = new Vector2(0, 0);
             abRt.anchorMax = new Vector2(1, 0);
@@ -784,7 +785,7 @@ public class UIManager : MonoBehaviour
         AddSpacer(parent, 40);
 
         // Trails section
-        Text trailHeader = CreateTextElement(parent, "TrailHeader", "EXHAUST / TRAILS", 36, new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
+        Text trailHeader = CreateTextElement(parent, "TrailHeader", "EXHAUST / TRAILS", 42, new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
         trailHeader.fontStyle = FontStyle.Bold;
         SetHeight(trailHeader.gameObject, 50);
 
@@ -794,7 +795,7 @@ public class UIManager : MonoBehaviour
             bool isUnlocked = ps.UnlockedTrails.Contains(trail.id);
             bool isEquipped = ps.ActiveTrail == trail.id;
 
-            GameObject card = CreateLayoutItem(parent, "Trail_" + trail.id, 200);
+            GameObject card = CreateLayoutItem(parent, "Trail_" + trail.id, 220);
             card.GetComponent<Image>().color = isEquipped ? Color.white : Color.black;
             AddOutline(card, isEquipped ? Color.white : (isUnlocked ? new Color(1, 1, 1, 0.5f) : new Color(1, 1, 1, 0.2f)));
 
@@ -806,26 +807,29 @@ public class UIManager : MonoBehaviour
 
             Color textColor = isEquipped ? Color.black : Color.white;
 
-            Text nameText = CreateTextElement(card.transform, "Name", trail.name.ToUpper(), 36, textColor, TextAnchor.UpperLeft);
+            Text nameText = CreateTextElement(card.transform, "Name", trail.name.ToUpper(), 38, textColor, TextAnchor.UpperLeft);
             nameText.fontStyle = FontStyle.Bold;
-            PositionText(nameText, new Vector2(20, -15), new Vector2(-20, -40));
+            PositionText(nameText, new Vector2(24, -16), new Vector2(-24, -42));
 
-            Text perkText = CreateTextElement(card.transform, "Perk", trail.perk, 24, isEquipped ? new Color(0, 0, 0, 0.7f) : new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
-            PositionText(perkText, new Vector2(20, -60), new Vector2(-20, -40));
+            Text perkText = CreateTextElement(card.transform, "Perk", trail.perk, 26, isEquipped ? new Color(0, 0, 0, 0.7f) : new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
+            PositionText(perkText, new Vector2(24, -60), new Vector2(-24, -35));
 
             if (isEquipped)
             {
-                Text activeTxt = CreateTextElement(card.transform, "Active", "EQUIPPED", 20, Color.white, TextAnchor.UpperRight);
-                activeTxt.fontStyle = FontStyle.Bold;
-                RectTransform atRt = activeTxt.GetComponent<RectTransform>();
+                GameObject badge = new GameObject("EquipBadge", typeof(RectTransform), typeof(Image));
+                badge.transform.SetParent(card.transform, false);
+                badge.GetComponent<Image>().color = Color.black;
+                AddOutline(badge);
+                RectTransform atRt = badge.GetComponent<RectTransform>();
                 atRt.anchorMin = new Vector2(1, 1);
                 atRt.anchorMax = new Vector2(1, 1);
                 atRt.pivot = new Vector2(1, 1);
                 atRt.sizeDelta = new Vector2(140, 36);
                 atRt.anchoredPosition = new Vector2(-15, -15);
-                Image atBg = activeTxt.gameObject.AddComponent<Image>();
-                atBg.color = Color.black;
-                atBg.raycastTarget = false;
+                Text activeTxt = CreateTextElement(badge.transform, "Lbl", "EQUIPPED", 20, Color.white, TextAnchor.MiddleCenter);
+                activeTxt.fontStyle = FontStyle.Bold;
+                activeTxt.raycastTarget = false;
+                FillRect(activeTxt);
             }
 
             string btnLabel = isUnlocked ? (isEquipped ? "EQUIPPED" : "INITIALIZE") : "LOCKED";
@@ -834,7 +838,7 @@ public class UIManager : MonoBehaviour
             actionBtn.GetComponent<Image>().color = Color.black;
             Outline abOl = actionBtn.AddComponent<Outline>();
             abOl.effectColor = isEquipped ? Color.black : (isUnlocked ? Color.white : new Color(1, 1, 1, 0.2f));
-            abOl.effectDistance = new Vector2(1, 1);
+            abOl.effectDistance = new Vector2(1, -1);
             RectTransform abRt = actionBtn.GetComponent<RectTransform>();
             abRt.anchorMin = new Vector2(0, 0);
             abRt.anchorMax = new Vector2(1, 0);
@@ -866,7 +870,7 @@ public class UIManager : MonoBehaviour
         var ps = PlayerState.Instance;
 
         // Header
-        Text title = CreateTextElement(parent, "Title", "PROGRESSION", 60, Color.white, TextAnchor.MiddleLeft);
+        Text title = CreateTextElement(parent, "Title", "PROGRESSION", 64, Color.white, TextAnchor.MiddleLeft);
         title.fontStyle = FontStyle.Bold;
         SetHeight(title.gameObject, 70);
 
@@ -1069,7 +1073,7 @@ public class UIManager : MonoBehaviour
     {
         var ps = PlayerState.Instance;
 
-        Text title = CreateTextElement(parent, "Title", "CURRENCY TERMINAL", 60, Color.white, TextAnchor.MiddleLeft);
+        Text title = CreateTextElement(parent, "Title", "CURRENCY TERMINAL", 64, Color.white, TextAnchor.MiddleLeft);
         title.fontStyle = FontStyle.Bold;
         SetHeight(title.gameObject, 80);
 
@@ -1369,7 +1373,7 @@ public class UIManager : MonoBehaviour
         gameHudPanel.SetActive(false);
 
         // Location text (top-left)
-        hudLocationText = CreateTextElement(gameHudPanel.transform, "Location", "", 32, Color.white, TextAnchor.UpperLeft);
+        hudLocationText = CreateTextElement(gameHudPanel.transform, "Location", "", 30, Color.white, TextAnchor.UpperLeft);
         hudLocationText.fontStyle = FontStyle.Bold;
         RectTransform locRt = hudLocationText.GetComponent<RectTransform>();
         locRt.anchorMin = new Vector2(0, 1);
@@ -1379,7 +1383,7 @@ public class UIManager : MonoBehaviour
         locRt.anchoredPosition = new Vector2(40, -40);
 
         // Shield text
-        hudShieldText = CreateTextElement(gameHudPanel.transform, "Shield", "", 26, Color.white, TextAnchor.UpperLeft);
+        hudShieldText = CreateTextElement(gameHudPanel.transform, "Shield", "", 24, Color.white, TextAnchor.UpperLeft);
         RectTransform shRt = hudShieldText.GetComponent<RectTransform>();
         shRt.anchorMin = new Vector2(0, 1);
         shRt.anchorMax = new Vector2(0.6f, 1);
@@ -1389,6 +1393,7 @@ public class UIManager : MonoBehaviour
 
         // Fleet text
         hudFleetText = CreateTextElement(gameHudPanel.transform, "Fleet", "", 22, Color.white, TextAnchor.UpperLeft);
+        // text-[10px] scaled
         hudFleetText.fontStyle = FontStyle.Bold;
         RectTransform flRt = hudFleetText.GetComponent<RectTransform>();
         flRt.anchorMin = new Vector2(0, 1);
@@ -1398,7 +1403,7 @@ public class UIManager : MonoBehaviour
         flRt.anchoredPosition = new Vector2(40, -120);
 
         // HUD message (bottom center)
-        hudMessageText = CreateTextElement(gameHudPanel.transform, "Message", "", 26, new Color(1, 1, 1, 0.5f), TextAnchor.MiddleCenter);
+        hudMessageText = CreateTextElement(gameHudPanel.transform, "Message", "", 24, new Color(1, 1, 1, 0.5f), TextAnchor.MiddleCenter);
         RectTransform msgRt = hudMessageText.GetComponent<RectTransform>();
         msgRt.anchorMin = new Vector2(0, 0);
         msgRt.anchorMax = new Vector2(1, 0);
@@ -1415,10 +1420,10 @@ public class UIManager : MonoBehaviour
         fbRt.anchorMin = new Vector2(0, 0);
         fbRt.anchorMax = new Vector2(0, 0);
         fbRt.pivot = new Vector2(0, 0);
-        fbRt.sizeDelta = new Vector2(220, 70);
+        fbRt.sizeDelta = new Vector2(180, 60);
         fbRt.anchoredPosition = new Vector2(40, 80);
 
-        Text fbTxt = CreateTextElement(fleetBtn.transform, "Lbl", "\u2708 FLEET", 24, Color.white, TextAnchor.MiddleCenter);
+        Text fbTxt = CreateTextElement(fleetBtn.transform, "Lbl", "\u2708 FLEET", 22, Color.white, TextAnchor.MiddleCenter);
         fbTxt.fontStyle = FontStyle.Bold;
         fbTxt.raycastTarget = false;
         FillRect(fbTxt);
@@ -1467,11 +1472,11 @@ public class UIManager : MonoBehaviour
         vlg.childForceExpandHeight = false;
         vlg.childAlignment = TextAnchor.MiddleCenter;
 
-        Text goTitle = CreateTextElement(box.transform, "Title", "SIGNAL LOST", 52, Color.white, TextAnchor.MiddleCenter);
+        Text goTitle = CreateTextElement(box.transform, "Title", "SIGNAL LOST", 42, Color.white, TextAnchor.MiddleCenter);
         goTitle.fontStyle = FontStyle.Bold;
         SetHeight(goTitle.gameObject, 60);
 
-        Text goDesc = CreateTextElement(box.transform, "Desc", "Trajectory compromised.", 32, new Color(0.8f, 0.8f, 0.8f), TextAnchor.MiddleCenter);
+        Text goDesc = CreateTextElement(box.transform, "Desc", "Trajectory compromised.", 30, new Color(0.8f, 0.8f, 0.8f), TextAnchor.MiddleCenter);
         SetHeight(goDesc.gameObject, 45);
 
         if (hasShields)
@@ -1786,7 +1791,7 @@ public class UIManager : MonoBehaviour
         Outline ol = obj.GetComponent<Outline>();
         if (ol == null) ol = obj.AddComponent<Outline>();
         ol.effectColor = color;
-        ol.effectDistance = new Vector2(2, 2);
+        ol.effectDistance = new Vector2(1, -1);
     }
 
     void PositionText(Text txt, Vector2 offset, Vector2 sizeOffset)
@@ -1843,10 +1848,10 @@ public class UIManager : MonoBehaviour
         btn.transform.SetParent(parent, false);
         btn.GetComponent<Image>().color = isActive ? Color.white : Color.black;
         AddOutline(btn);
-        btn.GetComponent<LayoutElement>().preferredWidth = 130;
-        btn.GetComponent<LayoutElement>().preferredHeight = 60;
+        btn.GetComponent<LayoutElement>().preferredWidth = 110;
+        btn.GetComponent<LayoutElement>().preferredHeight = 50;
 
-        Text txt = CreateTextElement(btn.transform, "Lbl", label, 24, isActive ? Color.black : Color.white, TextAnchor.MiddleCenter);
+        Text txt = CreateTextElement(btn.transform, "Lbl", label, 26, isActive ? Color.black : Color.white, TextAnchor.MiddleCenter);
         txt.fontStyle = FontStyle.Bold;
         txt.raycastTarget = false;
         FillRect(txt);
