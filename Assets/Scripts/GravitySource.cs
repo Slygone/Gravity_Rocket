@@ -4,8 +4,8 @@ using UnityEngine.Rendering;
 public class GravitySource : MonoBehaviour
 {
     [Header("Planet Properties")]
-    public float mass = 80f;
-    public float radius = 20f;
+    public float mass = 60f;
+    public float radius = 10f;
 
     private static Material glMaterial;
 
