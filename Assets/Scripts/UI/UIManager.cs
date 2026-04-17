@@ -264,11 +264,12 @@ public class UIManager : MonoBehaviour
 
     void AddNavLabel(Transform parent, string text, Color color)
     {
-        Text t = CreateTextElement(parent, "lbl", text, 38, color, TextAnchor.MiddleLeft);
+        Text t = CreateTextElement(parent, "lbl", text, 28, color, TextAnchor.MiddleLeft);
         t.fontStyle = FontStyle.Bold;
+        t.raycastTarget = false;
         LayoutElement le = t.gameObject.AddComponent<LayoutElement>();
-        le.minWidth = 100;
-        le.preferredWidth = 160;
+        le.minWidth = 80;
+        le.preferredWidth = 140;
     }
 
     void AddNavButton(Transform parent, string label, View targetView)
@@ -465,20 +466,25 @@ public class UIManager : MonoBehaviour
 
         // Content
         VerticalLayoutGroup vlg = card.AddComponent<VerticalLayoutGroup>();
-        vlg.padding = new RectOffset(24, 24, 16, 16);
-        vlg.spacing = 6;
+        vlg.padding = new RectOffset(10, 10, 10, 10);
+        vlg.spacing = 4;
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
 
         // Title row
-        Text titleTxt = CreateTextElement(card.transform, "Title", "SECTOR " + sectorNum, 38, Color.white, TextAnchor.UpperLeft);
+        Text titleTxt = CreateTextElement(card.transform, "Title", "SEC " + sectorNum, 26, Color.white, TextAnchor.UpperLeft);
         titleTxt.fontStyle = FontStyle.Bold;
-        SetHeight(titleTxt.gameObject, 44);
+        titleTxt.raycastTarget = false;
+        SetHeight(titleTxt.gameObject, 32);
 
         // Mechanics tags
         GameObject tagsRow = CreateHLayout(card.transform, "Tags", Vector2.zero, TextAnchor.MiddleLeft);
-        SetHeight(tagsRow, 32);
-        tagsRow.GetComponent<HorizontalLayoutGroup>().spacing = 6;
+        SetHeight(tagsRow, 26);
+        HorizontalLayoutGroup tagHlg = tagsRow.GetComponent<HorizontalLayoutGroup>();
+        tagHlg.spacing = 4;
+        tagHlg.childForceExpandHeight = true;
 
         foreach (string mechId in mechIds)
         {
@@ -491,10 +497,13 @@ public class UIManager : MonoBehaviour
             tagOl.effectColor = isUnlocked ? mech.color : new Color(1, 1, 1, 0.3f);
             tagOl.effectDistance = new Vector2(1, -1);
             LayoutElement tagLe = tag.AddComponent<LayoutElement>();
-            tagLe.preferredWidth = 160;
-            tagLe.preferredHeight = 28;
-            Text tagTxt = CreateTextElement(tag.transform, "Lbl", mech.name.ToUpper(), 20, isUnlocked ? mech.color : new Color(1, 1, 1, 0.3f), TextAnchor.MiddleCenter);
+            tagLe.preferredWidth = 70;
+            tagLe.preferredHeight = 24;
+            string shortName = mech.name.ToUpper();
+            if (shortName.Length > 7) shortName = shortName.Substring(0, 7);
+            Text tagTxt = CreateTextElement(tag.transform, "Lbl", shortName, 13, isUnlocked ? mech.color : new Color(1, 1, 1, 0.3f), TextAnchor.MiddleCenter);
             tagTxt.fontStyle = FontStyle.Bold;
+            tagTxt.raycastTarget = false;
             FillRect(tagTxt);
         }
 
@@ -504,13 +513,15 @@ public class UIManager : MonoBehaviour
         spacer.GetComponent<LayoutElement>().flexibleHeight = 1;
 
         // Stats
-        Text lvlTxt = CreateTextElement(card.transform, "Lvl", $"LVL: {levelsCleared}/5", 26, Color.white, TextAnchor.LowerLeft);
+        Text lvlTxt = CreateTextElement(card.transform, "Lvl", $"LVL {levelsCleared}/5", 18, Color.white, TextAnchor.LowerLeft);
         lvlTxt.fontStyle = FontStyle.Bold;
-        SetHeight(lvlTxt.gameObject, 28);
+        lvlTxt.raycastTarget = false;
+        SetHeight(lvlTxt.gameObject, 22);
 
-        Text starsTxt = CreateTextElement(card.transform, "Stars", $"{sectorStars}/15 \u2605", 30, Color.white, TextAnchor.LowerLeft);
+        Text starsTxt = CreateTextElement(card.transform, "Stars", $"{sectorStars}/15 \u2605", 22, Color.white, TextAnchor.LowerLeft);
         starsTxt.fontStyle = FontStyle.Bold;
-        SetHeight(starsTxt.gameObject, 32);
+        starsTxt.raycastTarget = false;
+        SetHeight(starsTxt.gameObject, 26);
 
         // Button
         Button btn = card.GetComponent<Button>();
@@ -574,7 +585,7 @@ public class UIManager : MonoBehaviour
             GameObject hazard = new GameObject("Hazard_" + mechId, typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(VerticalLayoutGroup));
             hazard.transform.SetParent(parent, false);
             hazard.GetComponent<Image>().color = Color.black;
-            hazard.GetComponent<LayoutElement>().preferredHeight = isMet ? 80 : 100;
+            hazard.GetComponent<LayoutElement>().preferredHeight = isMet ? 95 : 130;
             AddOutline(hazard, isMet ? mech.color : Color.red);
             VerticalLayoutGroup hzVlg = hazard.GetComponent<VerticalLayoutGroup>();
             hzVlg.padding = new RectOffset(20, 20, 10, 10);
@@ -763,33 +774,35 @@ public class UIManager : MonoBehaviour
         card.GetComponent<LayoutElement>().flexibleWidth = 1;
         AddOutline(card, isEquipped ? Color.white : (isUnlocked ? new Color(1, 1, 1, 0.5f) : new Color(1, 1, 1, 0.2f)));
         VerticalLayoutGroup vlg = card.GetComponent<VerticalLayoutGroup>();
-        vlg.padding = new RectOffset(24, 24, 16, 16);
-        vlg.spacing = 4;
+        vlg.padding = new RectOffset(12, 12, 10, 10);
+        vlg.spacing = 3;
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
         vlg.childControlWidth = true;
         vlg.childControlHeight = true;
         if (!isUnlocked) card.AddComponent<CanvasGroup>().alpha = 0.4f;
 
-        Text nameText = CreateTextElement(card.transform, "Name", ship.name.ToUpper(), 38, textColor, TextAnchor.MiddleLeft);
+        Text nameText = CreateTextElement(card.transform, "Name", ship.name.ToUpper(), 24, textColor, TextAnchor.MiddleLeft);
         nameText.fontStyle = FontStyle.Bold;
-        SetHeight(nameText.gameObject, 44);
+        nameText.raycastTarget = false;
+        SetHeight(nameText.gameObject, 32);
 
-        Text perkText = CreateTextElement(card.transform, "Perk", ship.perk, 26,
+        Text perkText = CreateTextElement(card.transform, "Perk", ship.perk, 18,
             isEquipped ? new Color(0, 0, 0, 0.7f) : new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
         perkText.horizontalOverflow = HorizontalWrapMode.Wrap;
-        SetHeight(perkText.gameObject, 50);
+        perkText.raycastTarget = false;
+        SetHeight(perkText.gameObject, 44);
 
         AddFlexSpacer(card.transform);
 
-        string btnLabel = isUnlocked ? (isEquipped ? "DETACH" : "ASSIGN TO FLEET") : "LOCKED";
+        string btnLabel = isUnlocked ? (isEquipped ? "DETACH" : "ASSIGN") : "LOCKED";
         GameObject actionBtn = new GameObject("Action", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
         actionBtn.transform.SetParent(card.transform, false);
-        actionBtn.GetComponent<Image>().color = isEquipped ? Color.black : Color.black;
-        actionBtn.GetComponent<LayoutElement>().preferredHeight = 55;
-        AddOutline(actionBtn, isEquipped ? Color.black : (isUnlocked ? Color.white : new Color(1, 1, 1, 0.2f)));
-        Text abTxt = CreateTextElement(actionBtn.transform, "Lbl", btnLabel, 22,
-            isEquipped ? Color.white : (isUnlocked ? Color.white : new Color(1, 1, 1, 0.3f)), TextAnchor.MiddleCenter);
+        actionBtn.GetComponent<Image>().color = Color.black;
+        actionBtn.GetComponent<LayoutElement>().preferredHeight = 48;
+        AddOutline(actionBtn, isUnlocked ? Color.white : new Color(1, 1, 1, 0.2f));
+        Text abTxt = CreateTextElement(actionBtn.transform, "Lbl", btnLabel, 18,
+            isUnlocked ? Color.white : new Color(1, 1, 1, 0.3f), TextAnchor.MiddleCenter);
         abTxt.fontStyle = FontStyle.Bold;
         abTxt.raycastTarget = false;
         FillRect(abTxt);
@@ -809,9 +822,9 @@ public class UIManager : MonoBehaviour
             RectTransform atRt = badge.GetComponent<RectTransform>();
             atRt.anchorMin = new Vector2(1, 1); atRt.anchorMax = new Vector2(1, 1);
             atRt.pivot = new Vector2(1, 1);
-            atRt.sizeDelta = new Vector2(120, 32);
-            atRt.anchoredPosition = new Vector2(-24, -16);
-            Text activeTxt = CreateTextElement(badge.transform, "Lbl", "ACTIVE", 20, Color.white, TextAnchor.MiddleCenter);
+            atRt.sizeDelta = new Vector2(70, 22);
+            atRt.anchoredPosition = new Vector2(-8, -8);
+            Text activeTxt = CreateTextElement(badge.transform, "Lbl", "ACTIVE", 14, Color.white, TextAnchor.MiddleCenter);
             activeTxt.fontStyle = FontStyle.Bold; activeTxt.raycastTarget = false; FillRect(activeTxt);
         }
     }
@@ -828,33 +841,35 @@ public class UIManager : MonoBehaviour
         card.GetComponent<LayoutElement>().flexibleWidth = 1;
         AddOutline(card, isEquipped ? Color.white : (isUnlocked ? new Color(1, 1, 1, 0.5f) : new Color(1, 1, 1, 0.2f)));
         VerticalLayoutGroup vlg = card.GetComponent<VerticalLayoutGroup>();
-        vlg.padding = new RectOffset(24, 24, 16, 16);
-        vlg.spacing = 4;
+        vlg.padding = new RectOffset(12, 12, 10, 10);
+        vlg.spacing = 3;
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
         vlg.childControlWidth = true;
         vlg.childControlHeight = true;
         if (!isUnlocked) card.AddComponent<CanvasGroup>().alpha = 0.4f;
 
-        Text nameText = CreateTextElement(card.transform, "Name", trail.name.ToUpper(), 38, textColor, TextAnchor.MiddleLeft);
+        Text nameText = CreateTextElement(card.transform, "Name", trail.name.ToUpper(), 24, textColor, TextAnchor.MiddleLeft);
         nameText.fontStyle = FontStyle.Bold;
-        SetHeight(nameText.gameObject, 44);
+        nameText.raycastTarget = false;
+        SetHeight(nameText.gameObject, 32);
 
-        Text perkText = CreateTextElement(card.transform, "Perk", trail.perk, 26,
+        Text perkText = CreateTextElement(card.transform, "Perk", trail.perk, 18,
             isEquipped ? new Color(0, 0, 0, 0.7f) : new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
         perkText.horizontalOverflow = HorizontalWrapMode.Wrap;
-        SetHeight(perkText.gameObject, 50);
+        perkText.raycastTarget = false;
+        SetHeight(perkText.gameObject, 44);
 
         AddFlexSpacer(card.transform);
 
-        string btnLabel = isUnlocked ? (isEquipped ? "EQUIPPED" : "INITIALIZE") : "LOCKED";
+        string btnLabel = isUnlocked ? (isEquipped ? "EQUIPPED" : "EQUIP") : "LOCKED";
         GameObject actionBtn = new GameObject("Action", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
         actionBtn.transform.SetParent(card.transform, false);
         actionBtn.GetComponent<Image>().color = Color.black;
-        actionBtn.GetComponent<LayoutElement>().preferredHeight = 55;
-        AddOutline(actionBtn, isEquipped ? Color.black : (isUnlocked ? Color.white : new Color(1, 1, 1, 0.2f)));
-        Text abTxt = CreateTextElement(actionBtn.transform, "Lbl", btnLabel, 22,
-            isEquipped ? Color.white : (isUnlocked ? Color.white : new Color(1, 1, 1, 0.3f)), TextAnchor.MiddleCenter);
+        actionBtn.GetComponent<LayoutElement>().preferredHeight = 48;
+        AddOutline(actionBtn, isUnlocked ? Color.white : new Color(1, 1, 1, 0.2f));
+        Text abTxt = CreateTextElement(actionBtn.transform, "Lbl", btnLabel, 18,
+            isUnlocked ? Color.white : new Color(1, 1, 1, 0.3f), TextAnchor.MiddleCenter);
         abTxt.fontStyle = FontStyle.Bold; abTxt.raycastTarget = false; FillRect(abTxt);
         if (isUnlocked && !isEquipped)
         {
@@ -872,9 +887,9 @@ public class UIManager : MonoBehaviour
             RectTransform atRt = badge.GetComponent<RectTransform>();
             atRt.anchorMin = new Vector2(1, 1); atRt.anchorMax = new Vector2(1, 1);
             atRt.pivot = new Vector2(1, 1);
-            atRt.sizeDelta = new Vector2(140, 32);
-            atRt.anchoredPosition = new Vector2(-24, -16);
-            Text activeTxt = CreateTextElement(badge.transform, "Lbl", "EQUIPPED", 20, Color.white, TextAnchor.MiddleCenter);
+            atRt.sizeDelta = new Vector2(86, 22);
+            atRt.anchoredPosition = new Vector2(-8, -8);
+            Text activeTxt = CreateTextElement(badge.transform, "Lbl", "EQUIPPED", 14, Color.white, TextAnchor.MiddleCenter);
             activeTxt.fontStyle = FontStyle.Bold; activeTxt.raycastTarget = false; FillRect(activeTxt);
         }
     }
@@ -1018,6 +1033,8 @@ public class UIManager : MonoBehaviour
             thHlg.padding = new RectOffset(15, 15, 0, 0);
             thHlg.childForceExpandHeight = true;
             thHlg.childForceExpandWidth = false;
+            thHlg.childControlWidth = true;
+            thHlg.childControlHeight = true;
 
             Color headerColor = isUnlocked ? Color.black : new Color(1, 1, 1, 0.7f);
             Text tierTitle = CreateTextElement(tierHeader.transform, "TTitle", $"TIER {tier.level}", 28, headerColor, TextAnchor.MiddleLeft);
@@ -1177,9 +1194,15 @@ public class UIManager : MonoBehaviour
                 vlg.childControlHeight = true;
                 vlg.childAlignment = TextAnchor.MiddleCenter;
 
-                Text amountTxt = CreateTextElement(card.transform, "Amount", $"\u25C9 {pack.amount} CREDITS +", 42, new Color(1f, 0.84f, 0f), TextAnchor.MiddleCenter);
+                Text amountTxt = CreateTextElement(card.transform, "Amount", $"\u25C9 {pack.amount} +", 26, new Color(1f, 0.84f, 0f), TextAnchor.MiddleCenter);
                 amountTxt.fontStyle = FontStyle.Bold;
-                SetHeight(amountTxt.gameObject, 50);
+                amountTxt.raycastTarget = false;
+                SetHeight(amountTxt.gameObject, 36);
+
+                Text credLbl = CreateTextElement(card.transform, "CredLbl", "CREDITS", 16, new Color(1, 1, 1, 0.6f), TextAnchor.MiddleCenter);
+                credLbl.fontStyle = FontStyle.Bold;
+                credLbl.raycastTarget = false;
+                SetHeight(credLbl.gameObject, 20);
 
                 AddFlexSpacer(card.transform);
 
@@ -1187,8 +1210,8 @@ public class UIManager : MonoBehaviour
                 GameObject buyBtn = new GameObject("Buy", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
                 buyBtn.transform.SetParent(card.transform, false);
                 buyBtn.GetComponent<Image>().color = Color.white;
-                buyBtn.GetComponent<LayoutElement>().preferredHeight = 55;
-                Text buyTxt = CreateTextElement(buyBtn.transform, "Lbl", "ACQUIRE " + pack.price, 24, Color.black, TextAnchor.MiddleCenter);
+                buyBtn.GetComponent<LayoutElement>().preferredHeight = 48;
+                Text buyTxt = CreateTextElement(buyBtn.transform, "Lbl", pack.price, 18, Color.black, TextAnchor.MiddleCenter);
                 buyTxt.fontStyle = FontStyle.Bold; buyTxt.raycastTarget = false; FillRect(buyTxt);
                 buyBtn.GetComponent<Button>().onClick.AddListener(() => { SimulatePurchase(capturedAmount); });
             }
@@ -1226,13 +1249,15 @@ public class UIManager : MonoBehaviour
                     vlg.childControlWidth = true;
                     vlg.childControlHeight = true;
 
-                    Text nameText = CreateTextElement(card.transform, "Name", $"{item.name.ToUpper()} X{item.qty}", 30, Color.white, TextAnchor.MiddleLeft);
+                    Text nameText = CreateTextElement(card.transform, "Name", $"{item.name.ToUpper()} X{item.qty}", 20, Color.white, TextAnchor.MiddleLeft);
                     nameText.fontStyle = FontStyle.Bold;
-                    SetHeight(nameText.gameObject, 34);
+                    nameText.raycastTarget = false;
+                    SetHeight(nameText.gameObject, 26);
 
-                    Text descText = CreateTextElement(card.transform, "Desc", item.desc.ToUpper(), 22, new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
+                    Text descText = CreateTextElement(card.transform, "Desc", item.desc.ToUpper(), 14, new Color(1, 1, 1, 0.5f), TextAnchor.UpperLeft);
                     descText.horizontalOverflow = HorizontalWrapMode.Wrap;
-                    SetHeight(descText.gameObject, 30);
+                    descText.raycastTarget = false;
+                    SetHeight(descText.gameObject, 40);
 
                     AddFlexSpacer(card.transform);
 
@@ -1241,19 +1266,20 @@ public class UIManager : MonoBehaviour
                     SetHeight(priceRow, 44);
                     priceRow.GetComponent<HorizontalLayoutGroup>().childForceExpandWidth = false;
 
-                    string priceStr = $"\u25C9 {item.cost} CREDITS";
-                    if (item.originalCost > 0) priceStr = $"\u25C9 {item.cost} CREDITS (was {item.originalCost})";
-                    Text priceTxt = CreateTextElement(priceRow.transform, "Price", priceStr, 22, new Color(1f, 0.84f, 0f), TextAnchor.MiddleLeft);
+                    string priceStr = $"\u25C9 {item.cost}";
+                    if (item.originalCost > 0) priceStr = $"\u25C9 {item.cost} (was {item.originalCost})";
+                    Text priceTxt = CreateTextElement(priceRow.transform, "Price", priceStr, 16, new Color(1f, 0.84f, 0f), TextAnchor.MiddleLeft);
                     priceTxt.fontStyle = FontStyle.Bold;
+                    priceTxt.raycastTarget = false;
                     LayoutElement plLe = priceTxt.gameObject.AddComponent<LayoutElement>();
                     plLe.flexibleWidth = 1;
 
                     GameObject buyBtn = new GameObject("Buy", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
                     buyBtn.transform.SetParent(priceRow.transform, false);
                     buyBtn.GetComponent<Image>().color = Color.white;
-                    buyBtn.GetComponent<LayoutElement>().preferredWidth = 120;
-                    buyBtn.GetComponent<LayoutElement>().preferredHeight = 40;
-                    Text buyTxt = CreateTextElement(buyBtn.transform, "Lbl", "BUY", 22, Color.black, TextAnchor.MiddleCenter);
+                    buyBtn.GetComponent<LayoutElement>().preferredWidth = 80;
+                    buyBtn.GetComponent<LayoutElement>().preferredHeight = 38;
+                    Text buyTxt = CreateTextElement(buyBtn.transform, "Lbl", "BUY", 16, Color.black, TextAnchor.MiddleCenter);
                     buyTxt.fontStyle = FontStyle.Bold; buyTxt.raycastTarget = false; FillRect(buyTxt);
                 }
             }
@@ -1295,12 +1321,15 @@ public class UIManager : MonoBehaviour
         // Add VLG for content
         VerticalLayoutGroup vlg = container.AddComponent<VerticalLayoutGroup>();
         vlg.padding = new RectOffset(30, 30, 20, 20);
-        vlg.spacing = 15;
+        vlg.spacing = 12;
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
 
         // Header
         Text headerLeft = CreateTextElement(container.transform, "SecureLabel", "TRANSMISSION SECURE", 20, new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
+        headerLeft.raycastTarget = false;
         SetHeight(headerLeft.gameObject, 25);
 
         Text headerTitle = CreateTextElement(container.transform, "Title", "PRE-FLIGHT LOADOUT", 48, Color.white, TextAnchor.MiddleLeft);
@@ -1332,11 +1361,15 @@ public class UIManager : MonoBehaviour
             HorizontalLayoutGroup srHlg = shipRow.GetComponent<HorizontalLayoutGroup>();
             srHlg.padding = new RectOffset(15, 15, 0, 0);
             srHlg.childForceExpandHeight = true;
+            srHlg.childForceExpandWidth = true;
+            srHlg.childControlWidth = true;
+            srHlg.childControlHeight = true;
 
             Text shipTxt = CreateTextElement(shipRow.transform, "Name",
                 (isEquipped ? "\u2713 " : "") + ship.name.ToUpper(), 24,
                 isEquipped ? Color.black : new Color(1, 1, 1, 0.5f), TextAnchor.MiddleLeft);
             shipTxt.fontStyle = FontStyle.Bold;
+            shipTxt.raycastTarget = false;
 
             string capturedId = ship.id;
             Button shipBtn = shipRow.AddComponent<Button>();
@@ -1366,11 +1399,15 @@ public class UIManager : MonoBehaviour
             HorizontalLayoutGroup hzHlg = hazRow.GetComponent<HorizontalLayoutGroup>();
             hzHlg.padding = new RectOffset(15, 15, 0, 0);
             hzHlg.childForceExpandHeight = true;
+            hzHlg.childForceExpandWidth = true;
+            hzHlg.childControlWidth = true;
+            hzHlg.childControlHeight = true;
 
             string status = isMet ? "Addressed by Fleet" : ("Missing: " + (GameData.SHIPS.ContainsKey(mech.reqShip) ? GameData.SHIPS[mech.reqShip].name : "Unknown"));
             Text hazTxt = CreateTextElement(hazRow.transform, "Haz", $"\u26A0 {mech.name.ToUpper()} - {status}", 22,
                 isMet ? mech.color : Color.red, TextAnchor.MiddleLeft);
             hazTxt.fontStyle = FontStyle.Bold;
+            hazTxt.raycastTarget = false;
         }
 
         // Spacer
@@ -1574,6 +1611,8 @@ public class UIManager : MonoBehaviour
         vlg.spacing = 20;
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
         vlg.childAlignment = TextAnchor.MiddleCenter;
 
         Text goTitle = CreateTextElement(box.transform, "Title", "SIGNAL LOST", 42, Color.white, TextAnchor.MiddleCenter);
@@ -1638,6 +1677,8 @@ public class UIManager : MonoBehaviour
         vlg.spacing = 20;
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
         vlg.childAlignment = TextAnchor.MiddleCenter;
 
         Text title = CreateTextElement(box.transform, "Title", "DOCKING SUCCESSFUL", 48, Color.white, TextAnchor.MiddleCenter);
@@ -1679,9 +1720,11 @@ public class UIManager : MonoBehaviour
 
         VerticalLayoutGroup vlg = box.AddComponent<VerticalLayoutGroup>();
         vlg.padding = new RectOffset(30, 30, 30, 30);
-        vlg.spacing = 15;
+        vlg.spacing = 12;
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
 
         Text title = CreateTextElement(box.transform, "Title", "SELECT VESSEL", 32, Color.white, TextAnchor.MiddleLeft);
         title.fontStyle = FontStyle.Bold;
@@ -1702,6 +1745,9 @@ public class UIManager : MonoBehaviour
             HorizontalLayoutGroup sbHlg = shipBtn.GetComponent<HorizontalLayoutGroup>();
             sbHlg.padding = new RectOffset(20, 20, 0, 0);
             sbHlg.childForceExpandHeight = true;
+            sbHlg.childForceExpandWidth = true;
+            sbHlg.childControlWidth = true;
+            sbHlg.childControlHeight = true;
 
             Text shipTxt = CreateTextElement(shipBtn.transform, "Name",
                 (isActive ? "\u2713 " : "") + ship.name.Split(' ')[0].ToUpper(), 24,
@@ -1741,9 +1787,11 @@ public class UIManager : MonoBehaviour
 
         VerticalLayoutGroup vlg = box.AddComponent<VerticalLayoutGroup>();
         vlg.padding = new RectOffset(30, 30, 30, 30);
-        vlg.spacing = 15;
+        vlg.spacing = 12;
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
 
         Text header = CreateTextElement(box.transform, "Header", $"\u25B6 SECTOR {s} REPORT", 36, Color.white, TextAnchor.MiddleLeft);
         header.fontStyle = FontStyle.Bold;
@@ -1764,6 +1812,8 @@ public class UIManager : MonoBehaviour
             HorizontalLayoutGroup rowHlg = row.GetComponent<HorizontalLayoutGroup>();
             rowHlg.childForceExpandHeight = true;
             rowHlg.childForceExpandWidth = false;
+            rowHlg.childControlWidth = true;
+            rowHlg.childControlHeight = true;
 
             Text leftTxt = CreateTextElement(row.transform, "Left", "", 28, new Color(1, 1, 1, 0.7f), TextAnchor.MiddleLeft);
             leftTxt.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
@@ -1790,6 +1840,8 @@ public class UIManager : MonoBehaviour
         HorizontalLayoutGroup tRowHlg = totalRow.GetComponent<HorizontalLayoutGroup>();
         tRowHlg.childForceExpandHeight = true;
         tRowHlg.childForceExpandWidth = false;
+        tRowHlg.childControlWidth = true;
+        tRowHlg.childControlHeight = true;
 
         Text totalLeftTxt = CreateTextElement(totalRow.transform, "TLeft", "", 32, Color.white, TextAnchor.MiddleLeft);
         totalLeftTxt.fontStyle = FontStyle.Bold;
@@ -1861,6 +1913,8 @@ public class UIManager : MonoBehaviour
         hlg.spacing = 10;
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = true;
+        hlg.childControlWidth = true;
+        hlg.childControlHeight = true;
         hlg.childAlignment = alignment;
         return obj;
     }
